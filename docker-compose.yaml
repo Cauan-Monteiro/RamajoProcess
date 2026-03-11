@@ -6,7 +6,7 @@ services:
       MYSQL_ROOT_PASSWORD: Cauan@0272  # Senha do administrador (root)
       MYSQL_DATABASE: processos_ramajo       # Nome do banco de dados que sua API usa
     ports:
-      - "5432:5432"
+      - "3306:3306"
     volumes:
       - mysql_data:/var/lib/mysql
   
