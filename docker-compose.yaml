@@ -19,7 +19,7 @@ services:
       - mysqldb           # Espera o banco iniciar primeiro
     environment:
       # Lembre-se: jdbc:mysql://[QUEM_É_O_HOST]:3306/[NOME_DO_BANCO]
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysqldb:5432/processos_ramajo
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysqldb:3306/processos_ramajo
       SPRING_DATASOURCE_USERNAME: root  # Use o mesmo usuário definido no mysqldb
       SPRING_DATASOURCE_PASSWORD: Cauan@0272  # Use a mesma senha definida no mysqldb
   
