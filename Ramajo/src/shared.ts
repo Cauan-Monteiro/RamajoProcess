@@ -73,7 +73,7 @@ export interface TraveBanhoHistorico {
 // ─── Axios instance ───────────────────────────────────────────────────────────
 
 export const api: AxiosInstance = axios.create({
-  baseURL: 'http://129.148.62.223:5000/api',
+  baseURL: 'http://129.148.62.223:8080/api',
   headers: {
     'Content-Type': 'application/json',
   },
