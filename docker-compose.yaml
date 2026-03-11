@@ -4,14 +4,14 @@ services:
     restart: always
     environment:
       MYSQL_ROOT_PASSWORD: Cauan@0272  # Senha do administrador (root)
-      MYSQL_DATABASE: stats_data       # Nome do banco de dados que sua API usa
+      MYSQL_DATABASE: processos_ramajo       # Nome do banco de dados que sua API usa
     ports:
       - "5432:5432"
     volumes:
       - mysql_data:/var/lib/mysql
   
   api:
-    build: ./API          # Onde está o Dockerfile do Java
+    build: ./gestorProc         # Onde está o Dockerfile do Java
     restart: always
     ports:
       - "5000:5000"
@@ -24,7 +24,7 @@ services:
       SPRING_DATASOURCE_PASSWORD: Cauan@0272  # Use a mesma senha definida no mysqldb
   
   frontend:
-    build: ./FutQuinta         # Onde está o Dockerfile do frontend
+    build: ./Ramajo         # Onde está o Dockerfile do frontend
     restart: always
     ports:
       - "3000:3000"
