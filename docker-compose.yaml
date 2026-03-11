@@ -14,7 +14,7 @@ services:
     build: ./gestorProc         # Onde está o Dockerfile do Java
     restart: always
     ports:
-      - "5000:5000"
+      - "8080:8080"
     depends_on:
       - mysqldb           # Espera o banco iniciar primeiro
     environment:
@@ -27,7 +27,7 @@ services:
     build: ./Ramajo         # Onde está o Dockerfile do frontend
     restart: always
     ports:
-      - "3000:3000"
+      - "80:80"
     depends_on:
       - api
 
