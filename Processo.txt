@@ -1,0 +1,43 @@
+|  Processo:
+|  id
+|  
+|  numOS
+| 
+|  List<Trave> -> podem ser muitas traves (essas traves só poderão ser usadas em 
+|  um processo por vez, ou seja, necessitam ter algum tipo de 'emUso')
+|  
+|  List<TraveBanho> -> uma lista de: traveID, foi para banhoID por Xtempo
+|
+|  createdAt -> data e hora em que foi criado o processo
+|
+|  finishedAt -> data e hora em que encerrou
+|  
+ \__________________________________________________________________________________________
+
+
+|  Trave:
+|  id
+|  
+|  nome - nomeação dada para a Trave designada
+| 
+|  emUso ->  um boolean que diz se ela está no momento vinculada a algum processo
+|  
+ \__________________________________________________________________________________________
+
+
+|  Banho:
+|  id
+|  
+|  nome
+| 
+|  desc -> descrição previa do banho
+|  
+|  tempoBanho -> creio que um Float por é um dado em minutos
+|
+|  
+ \__________________________________________________________________________________________
+
+Sobre as relações:
+em um processo, preciso de uma tabela pivô entre os 3 que diga que, uma ou mais traves, de tal processo, passaram por tal banho (se vinculando por ID) e tenha também o createdAt e finishedAt
+
+

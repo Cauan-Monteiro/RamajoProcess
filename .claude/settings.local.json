@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cd \"C:\\\\Users\\\\cauan-monteiro\\\\OneDrive - PUCRS - BR\\\\GestorProcessosRamajo\\\\Ramajo\" && npm install react-router-dom 2>&1)",
+      "Bash(cd \"C:\\\\Users\\\\cauan-monteiro\\\\OneDrive - PUCRS - BR\\\\GestorProcessosRamajo\\\\Ramajo\" && npm run build 2>&1)"
+    ]
+  }
+}
