@@ -1,9 +1,8 @@
 package com.ramajo.gestorProc.entities;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.ramajo.gestorProc.enums.Estagio;
 import jakarta.persistence.*;
 
-import java.util.List;
 import java.util.Objects;
 
 @Entity
@@ -16,11 +15,16 @@ public class Trave {
     private String nome;
     private Boolean emUso;
 
-    @JsonIgnore
-    @OneToMany(mappedBy = "trave")
-    private List<TraveBanho> historicoBanhos;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = true)
+    private Estagio estagioAtual;
 
-    public Trave () {}
+    @ManyToOne
+    @JoinColumn(name = "processo_atual_id", nullable = true)
+    private Processo processoAtual;
+
+    public Trave() {}
+
     public Trave(String nome) {
         this.nome = nome;
         this.emUso = false;
@@ -46,10 +50,21 @@ public class Trave {
         this.emUso = emUso;
     }
 
-    public List<TraveBanho> getHistoricoBanhos() {
-        return historicoBanhos;
+    public Estagio getEstagioAtual() {
+        return estagioAtual;
     }
 
+    public void setEstagioAtual(Estagio estagioAtual) {
+        this.estagioAtual = estagioAtual;
+    }
+
+    public Processo getProcessoAtual() {
+        return processoAtual;
+    }
+
+    public void setProcessoAtual(Processo processoAtual) {
+        this.processoAtual = processoAtual;
+    }
 
     @Override
     public boolean equals(Object o) {
@@ -65,10 +80,6 @@ public class Trave {
 
     @Override
     public String toString() {
-        return "Trave{" +
-                "id=" + id +
-                ", nome='" + nome + '\'' +
-                ", emUso=" + emUso +
-                '}';
+        return "Trave{id=" + id + ", nome='" + nome + "', emUso=" + emUso + ", estagioAtual=" + estagioAtual + '}';
     }
 }

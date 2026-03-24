@@ -1,13 +1,13 @@
 package com.ramajo.gestorProc.repositories;
 
-import com.ramajo.gestorProc.entities.Banho;
+import com.ramajo.gestorProc.entities.AreaProducao;
 import com.ramajo.gestorProc.enums.Estagio;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
-import java.util.List;
+import java.util.Optional;
 
 @Repository
-public interface BanhoRepository extends JpaRepository<Banho, Long> {
-    List<Banho> findByAreas_Nome(Estagio estagio);
+public interface AreaProducaoRepository extends JpaRepository<AreaProducao, Long> {
+    Optional<AreaProducao> findByNome(Estagio nome);
 }

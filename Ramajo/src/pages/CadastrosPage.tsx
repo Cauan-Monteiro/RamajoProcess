@@ -3,6 +3,7 @@ import Modal from '../components/Modal';
 import {
   api,
   type AlertType,
+  type AreaProducao,
   type Trave,
   type Banho,
   type Estagio,
@@ -13,8 +14,6 @@ const ESTAGIO_LABELS: Record<Estagio, string> = {
   TRATAMENTO:     'Tratamento',
   POS_TRATAMENTO: 'Pós-Tratamento',
 };
-
-const ESTAGIOS: Estagio[] = ['PRE_TRATAMENTO', 'TRATAMENTO', 'POS_TRATAMENTO'];
 
 // ─── CadastrosPage ────────────────────────────────────────────────────────────
 
@@ -74,19 +73,20 @@ export default function CadastrosPage() {
 
   // ── Banhos ─────────────────────────────────────────────────────────────────
   const [banhos, setBanhos] = useState<Banho[]>([]);
+  const [areasDisponiveis, setAreasDisponiveis] = useState<AreaProducao[]>([]);
   const [secaoBanhosAberta, setSecaoBanhosAberta] = useState(true);
   const [modalNovoBanho, setModalNovoBanho] = useState(false);
   const [novoBanho, setNovoBanho] = useState<{
-    nome: string; descricao: string; tempoBanho: string; estagio: Estagio | '';
-  }>({ nome: '', descricao: '', tempoBanho: '', estagio: '' });
+    nome: string; descricao: string; tempoBanho: string; areaIds: number[];
+  }>({ nome: '', descricao: '', tempoBanho: '', areaIds: [] });
   const [modalEditarBanho, setModalEditarBanho] = useState<{
     open: boolean;
     id: number | null;
     nome: string;
     descricao: string;
     tempoBanho: string;
-    estagio: Estagio | '';
-  }>({ open: false, id: null, nome: '', descricao: '', tempoBanho: '', estagio: '' });
+    areaIds: number[];
+  }>({ open: false, id: null, nome: '', descricao: '', tempoBanho: '', areaIds: [] });
 
   // ── Data fetching ──────────────────────────────────────────────────────────
 
@@ -108,10 +108,20 @@ export default function CadastrosPage() {
     }
   }
 
+  async function carregarAreas() {
+    try {
+      const response = await api.get('/area');
+      setAreasDisponiveis(response.data);
+    } catch (erro) {
+      console.error('Erro ao carregar áreas:', erro);
+    }
+  }
+
   useEffect(() => {
     Promise.all([
       carregarTodasTraves(),
       carregarBanhos(),
+      carregarAreas(),
     ]).finally(() => setLoading(false));
   }, []);
 
@@ -205,11 +215,11 @@ export default function CadastrosPage() {
       await api.post('/banho', {
         nome: novoBanho.nome.trim(),
         descricao: novoBanho.descricao.trim(),
-        tempoBanho: parseFloat(novoBanho.tempoBanho),
-        estagio: novoBanho.estagio,
+        tempoBanho: parseInt(novoBanho.tempoBanho),
+        areaIds: novoBanho.areaIds,
       });
       setModalNovoBanho(false);
-      setNovoBanho({ nome: '', descricao: '', tempoBanho: '', estagio: '' });
+      setNovoBanho({ nome: '', descricao: '', tempoBanho: '', areaIds: [] });
       carregarBanhos();
       setAlertState({
         open: true,
@@ -234,10 +244,10 @@ export default function CadastrosPage() {
       await api.put(`/banho/${modalEditarBanho.id}`, {
         nome: modalEditarBanho.nome.trim(),
         descricao: modalEditarBanho.descricao.trim(),
-        tempoBanho: parseFloat(modalEditarBanho.tempoBanho),
-        estagio: modalEditarBanho.estagio,
+        tempoBanho: parseInt(modalEditarBanho.tempoBanho),
+        areaIds: modalEditarBanho.areaIds,
       });
-      setModalEditarBanho({ open: false, id: null, nome: '', descricao: '', tempoBanho: '', estagio: '' });
+      setModalEditarBanho({ open: false, id: null, nome: '', descricao: '', tempoBanho: '', areaIds: [] });
       carregarBanhos();
       setAlertState({
         open: true,
@@ -421,7 +431,7 @@ export default function CadastrosPage() {
             <button
               type="button"
               onClick={() => {
-                setNovoBanho({ nome: '', descricao: '', tempoBanho: '', estagio: '' });
+                setNovoBanho({ nome: '', descricao: '', tempoBanho: '', areaIds: [] });
                 setModalNovoBanho(true);
               }}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-cyan-600 text-white text-xs font-semibold rounded-md shadow-sm hover:bg-cyan-700 transition-colors"
@@ -457,10 +467,17 @@ export default function CadastrosPage() {
                   <span className="inline-flex w-fit items-center px-2 py-0.5 rounded-full text-[11px] font-semibold border bg-cyan-50 text-cyan-700 border-cyan-100">
                     {banho.tempoBanho}min
                   </span>
-                  {banho.estagio && (
-                    <span className="inline-flex w-fit items-center px-2 py-0.5 rounded-full text-[11px] font-semibold border bg-slate-50 text-slate-600 border-slate-200">
-                      {ESTAGIO_LABELS[banho.estagio]}
-                    </span>
+                  {banho.areas.length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {banho.areas.map((a) => (
+                        <span
+                          key={a.id}
+                          className="inline-flex w-fit items-center px-2 py-0.5 rounded-full text-[11px] font-semibold border bg-slate-50 text-slate-600 border-slate-200"
+                        >
+                          {ESTAGIO_LABELS[a.nome]}
+                        </span>
+                      ))}
+                    </div>
                   )}
                 </div>
 
@@ -474,7 +491,7 @@ export default function CadastrosPage() {
                         nome: banho.nome,
                         descricao: banho.descricao,
                         tempoBanho: String(banho.tempoBanho),
-                        estagio: banho.estagio ?? '',
+                        areaIds: banho.areas.map((a) => a.id),
                       })
                     }
                     className="px-3 py-1.5 text-xs font-semibold rounded-md bg-slate-50 text-slate-700 border border-slate-200 hover:bg-slate-100 transition-colors"
@@ -643,7 +660,7 @@ export default function CadastrosPage() {
           title="Novo Banho"
           onClose={() => {
             setModalNovoBanho(false);
-            setNovoBanho({ nome: '', descricao: '', tempoBanho: '', estagio: '' });
+            setNovoBanho({ nome: '', descricao: '', tempoBanho: '', areaIds: [] });
           }}
           description="Preencha os dados para cadastrar um novo tipo de banho."
           footer={
@@ -652,7 +669,7 @@ export default function CadastrosPage() {
                 type="button"
                 onClick={() => {
                   setModalNovoBanho(false);
-                  setNovoBanho({ nome: '', descricao: '', tempoBanho: '', estagio: '' });
+                  setNovoBanho({ nome: '', descricao: '', tempoBanho: '', areaIds: [] });
                 }}
                 className="px-4 py-2 text-xs sm:text-sm font-medium text-slate-600 rounded-lg hover:bg-slate-100 transition-colors"
               >
@@ -664,8 +681,8 @@ export default function CadastrosPage() {
                 disabled={
                   !novoBanho.nome.trim() ||
                   !novoBanho.tempoBanho ||
-                  parseFloat(novoBanho.tempoBanho) < 1 ||
-                  !novoBanho.estagio
+                  parseInt(novoBanho.tempoBanho) < 1 ||
+                  novoBanho.areaIds.length === 0
                 }
                 className="px-4 py-2 text-xs sm:text-sm font-medium text-white rounded-lg bg-cyan-600 hover:bg-cyan-700 shadow-sm transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
               >
@@ -708,17 +725,27 @@ export default function CadastrosPage() {
               />
             </div>
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-slate-700">Estágio</label>
-              <select
-                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-cyan-500/70 focus:border-cyan-500 transition-shadow bg-white"
-                value={novoBanho.estagio}
-                onChange={(e) => setNovoBanho((prev) => ({ ...prev, estagio: e.target.value as Estagio }))}
-              >
-                <option value="">Selecione o estágio…</option>
-                {ESTAGIOS.map((e) => (
-                  <option key={e} value={e}>{ESTAGIO_LABELS[e]}</option>
+              <label className="text-xs font-medium text-slate-700">Áreas de produção</label>
+              <div className="flex flex-col gap-2 rounded-lg border border-slate-200 px-3 py-2.5 bg-slate-50/60">
+                {areasDisponiveis.map((area) => (
+                  <label key={area.id} className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500"
+                      checked={novoBanho.areaIds.includes(area.id)}
+                      onChange={(e) => {
+                        setNovoBanho((prev) => ({
+                          ...prev,
+                          areaIds: e.target.checked
+                            ? [...prev.areaIds, area.id]
+                            : prev.areaIds.filter((id) => id !== area.id),
+                        }));
+                      }}
+                    />
+                    <span className="text-sm text-slate-700">{ESTAGIO_LABELS[area.nome]}</span>
+                  </label>
                 ))}
-              </select>
+              </div>
             </div>
           </div>
         </Modal>
@@ -729,7 +756,7 @@ export default function CadastrosPage() {
         <Modal
           title="Editar Banho"
           onClose={() =>
-            setModalEditarBanho({ open: false, id: null, nome: '', descricao: '', tempoBanho: '', estagio: '' })
+            setModalEditarBanho({ open: false, id: null, nome: '', descricao: '', tempoBanho: '', areaIds: [] })
           }
           description="Altere os dados do banho abaixo."
           footer={
@@ -743,7 +770,7 @@ export default function CadastrosPage() {
                     nome: '',
                     descricao: '',
                     tempoBanho: '',
-                    estagio: '',
+                    areaIds: [],
                   })
                 }
                 className="px-4 py-2 text-xs sm:text-sm font-medium text-slate-600 rounded-lg hover:bg-slate-100 transition-colors"
@@ -756,8 +783,8 @@ export default function CadastrosPage() {
                 disabled={
                   !modalEditarBanho.nome.trim() ||
                   !modalEditarBanho.tempoBanho ||
-                  parseFloat(modalEditarBanho.tempoBanho) < 1 ||
-                  !modalEditarBanho.estagio
+                  parseInt(modalEditarBanho.tempoBanho) < 1 ||
+                  modalEditarBanho.areaIds.length === 0
                 }
                 className="px-4 py-2 text-xs sm:text-sm font-medium text-white rounded-lg bg-cyan-600 hover:bg-cyan-700 shadow-sm transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
               >
@@ -803,19 +830,27 @@ export default function CadastrosPage() {
               />
             </div>
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-slate-700">Estágio</label>
-              <select
-                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-cyan-500/70 focus:border-cyan-500 transition-shadow bg-white"
-                value={modalEditarBanho.estagio}
-                onChange={(e) =>
-                  setModalEditarBanho((prev) => ({ ...prev, estagio: e.target.value as Estagio }))
-                }
-              >
-                <option value="">Selecione o estágio…</option>
-                {ESTAGIOS.map((e) => (
-                  <option key={e} value={e}>{ESTAGIO_LABELS[e]}</option>
+              <label className="text-xs font-medium text-slate-700">Áreas de produção</label>
+              <div className="flex flex-col gap-2 rounded-lg border border-slate-200 px-3 py-2.5 bg-slate-50/60">
+                {areasDisponiveis.map((area) => (
+                  <label key={area.id} className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500"
+                      checked={modalEditarBanho.areaIds.includes(area.id)}
+                      onChange={(e) => {
+                        setModalEditarBanho((prev) => ({
+                          ...prev,
+                          areaIds: e.target.checked
+                            ? [...prev.areaIds, area.id]
+                            : prev.areaIds.filter((id) => id !== area.id),
+                        }));
+                      }}
+                    />
+                    <span className="text-sm text-slate-700">{ESTAGIO_LABELS[area.nome]}</span>
+                  </label>
                 ))}
-              </select>
+              </div>
             </div>
           </div>
         </Modal>

@@ -1,10 +1,8 @@
 package com.ramajo.gestorProc.entities;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 
-import java.util.Date;
-import java.util.List;
+import java.time.LocalDateTime;
 import java.util.Objects;
 
 @Entity
@@ -16,21 +14,14 @@ public class Processo {
 
     private String numOS;
 
-    @OneToMany(mappedBy = "processo")
-    private List<TraveBanho> historicoBanhos;
-
-    @Temporal(TemporalType.TIMESTAMP)
-    private Date createdAt;
-
-    @Temporal(TemporalType.TIMESTAMP)
-    private Date finishedAt;
+    private LocalDateTime createdAt;
+    private LocalDateTime finishedAt;
 
     public Processo() {}
 
     public Processo(String numOS) {
         this.numOS = numOS;
-        this.createdAt = new Date();
-        this.finishedAt = null;
+        this.createdAt = LocalDateTime.now();
     }
 
     public Long getId() {
@@ -45,23 +36,19 @@ public class Processo {
         this.numOS = numOS;
     }
 
-    public List<TraveBanho> getHistoricoBanhos() {
-        return historicoBanhos;
-    }
-
-    public Date getCreatedAt() {
+    public LocalDateTime getCreatedAt() {
         return createdAt;
     }
 
-    public void setCreatedAt(Date createdAt) {
+    public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
     }
 
-    public Date getFinishedAt() {
+    public LocalDateTime getFinishedAt() {
         return finishedAt;
     }
 
-    public void setFinishedAt(Date finishedAt) {
+    public void setFinishedAt(LocalDateTime finishedAt) {
         this.finishedAt = finishedAt;
     }
 
@@ -69,21 +56,16 @@ public class Processo {
     public boolean equals(Object o) {
         if (o == null || getClass() != o.getClass()) return false;
         Processo processo = (Processo) o;
-        return Objects.equals(id, processo.id) && Objects.equals(numOS, processo.numOS);
+        return Objects.equals(id, processo.id);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, numOS);
+        return Objects.hashCode(id);
     }
 
     @Override
     public String toString() {
-        return "Processo{" +
-                "id=" + id +
-                ", numOS='" + numOS + '\'' +
-                ", createdAt=" + createdAt +
-                ", finishedAt=" + finishedAt +
-                '}';
+        return "Processo{id=" + id + ", numOS='" + numOS + "', createdAt=" + createdAt + '}';
     }
 }

@@ -2,24 +2,11 @@ import { useEffect, useState } from 'react';
 import {
   api,
   formatarTempo,
-  type Estagio,
   type Processo,
-  type TraveBanhoHistorico,
+  type SessaoHistorico,
 } from '../shared';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-
-const ESTAGIO_LABEL: Record<Estagio, string> = {
-  PRE_TRATAMENTO: 'Pré-Tratamento',
-  TRATAMENTO: 'Tratamento',
-  POS_TRATAMENTO: 'Pós-Tratamento',
-};
-
-const ESTAGIO_COR: Record<Estagio, string> = {
-  PRE_TRATAMENTO: 'bg-slate-100 text-slate-600 border-slate-200',
-  TRATAMENTO: 'bg-cyan-50 text-cyan-700 border-cyan-200',
-  POS_TRATAMENTO: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-};
 
 function formatarData(date: Date | string): string {
   return new Date(date).toLocaleDateString('pt-BR', {
@@ -40,12 +27,12 @@ function ProcessoRegistroCard({
 }: {
   processo: Processo;
   expandido: boolean;
-  historico: TraveBanhoHistorico[] | null;
+  historico: SessaoHistorico[] | null;
   carregando: boolean;
   onToggle: () => void;
 }) {
   // Agrupar sessões por trave
-  const porTrave: Record<string, TraveBanhoHistorico[]> = {};
+  const porTrave: Record<string, SessaoHistorico[]> = {};
   if (historico) {
     for (const s of historico) {
       (porTrave[s.traveNome] ??= []).push(s);
@@ -107,25 +94,13 @@ function ProcessoRegistroCard({
                     <table className="w-full text-xs">
                       <thead>
                         <tr className="bg-slate-50 text-slate-500">
-                          <th className="text-left px-3 py-2 font-medium">Estágio</th>
                           <th className="text-left px-3 py-2 font-medium">Banho</th>
                           <th className="text-right px-3 py-2 font-medium">Duração</th>
                         </tr>
                       </thead>
                       <tbody>
                         {sessoes.map((s) => (
-                          <tr key={s.traveBanhoId} className="border-t border-slate-100">
-                            <td className="px-3 py-2">
-                              {s.banhoEstagio ? (
-                                <span
-                                  className={`inline-block rounded border px-1.5 py-0.5 text-[11px] font-medium ${ESTAGIO_COR[s.banhoEstagio]}`}
-                                >
-                                  {ESTAGIO_LABEL[s.banhoEstagio]}
-                                </span>
-                              ) : (
-                                <span className="text-slate-400">—</span>
-                              )}
-                            </td>
+                          <tr key={s.sessaoId} className="border-t border-slate-100">
                             <td className="px-3 py-2 text-slate-700">{s.banhoNome}</td>
                             <td className="px-3 py-2 text-right text-slate-600">
                               {s.duracaoMinutos != null
@@ -152,7 +127,7 @@ function ProcessoRegistroCard({
 export default function RegistrosPage() {
   const [processos, setProcessos] = useState<Processo[]>([]);
   const [expandidos, setExpandidos] = useState<Set<number>>(new Set());
-  const [historicos, setHistoricos] = useState<Record<number, TraveBanhoHistorico[]>>({});
+  const [historicos, setHistoricos] = useState<Record<number, SessaoHistorico[]>>({});
   const [carregando, setCarregando] = useState<Set<number>>(new Set());
 
   useEffect(() => {

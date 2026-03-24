@@ -134,7 +134,7 @@ function ProcessoPosCard({
 
       <ul className="flex flex-col gap-2">
         {processo.traves.map((t) => {
-          const pronta = t.estagioAguardando === 'POS_TRATAMENTO';
+          const pronta = t.estagioAtual === 'POS_TRATAMENTO';
           return (
             <li
               key={t.traveId}
@@ -259,22 +259,22 @@ export default function ProcessosPage() {
             }));
 
             for (const t of todas) {
-              if (t.emBanho && t.banhoId !== null) {
+              if (t.emSessao && t.banhoId !== null) {
                 if (!travesAtivasMap[t.banhoId]) travesAtivasMap[t.banhoId] = [];
                 travesAtivasMap[t.banhoId].push(t);
-              } else if (t.estagioAguardando !== null) {
+              } else if (t.estagioAtual !== null) {
                 aguardandoList.push(t);
               }
             }
 
-            // Build processosPos: include processo if any trave has estagioAguardando='POS_TRATAMENTO'
-            const temPos = todas.some((t) => t.estagioAguardando === 'POS_TRATAMENTO');
+            // Build processosPos: include processo if any trave has estagioAtual='POS_TRATAMENTO'
+            const temPos = todas.some((t) => t.estagioAtual === 'POS_TRATAMENTO');
             if (temPos) {
               processosPosMap[proc.id] = {
                 processoId: proc.id,
                 processoNumOS: proc.numOS,
                 traves: todas,
-                prontoParaFinalizar: todas.every((t) => t.estagioAguardando === 'POS_TRATAMENTO'),
+                prontoParaFinalizar: todas.every((t) => t.estagioAtual === 'POS_TRATAMENTO'),
               };
             }
           } catch {
@@ -326,15 +326,15 @@ export default function ProcessosPage() {
 
       const processoId: number = resposta.data.id;
       const banhoSabao = banhos.find(
-        (b) => b.nome === 'Sabão' && b.estagio === 'PRE_TRATAMENTO'
+        (b) => b.nome === 'Sabão' && b.areas.some((a) => a.nome === 'PRE_TRATAMENTO')
       );
 
       if (banhoSabao) {
         await Promise.all(
           travesSelecionadas.map((traveId) =>
-            api.post('/trave_banho', {
+            api.post('/trave_sessao', {
               processoId,
-              traveId: [traveId],
+              traveIds: [traveId],
               banhoId: banhoSabao.id,
             })
           )
@@ -385,10 +385,10 @@ export default function ProcessosPage() {
       for (const traveId of travesSelecionadasMover) {
         const trave = travesPorBanho[banhoAberto.id]?.find((t) => t.traveId === traveId);
         if (!trave) continue;
-        await api.put(`/trave_banho/finalizar/${trave.traveBanhoId}`);
-        await api.post('/trave_banho', {
+        await api.put(`/trave_sessao/finalizar/${trave.sessaoId}`);
+        await api.post('/trave_sessao', {
           processoId: trave.processoId,
-          traveId: [traveId],
+          traveIds: [traveId],
           banhoId: banhoDestinoId,
         });
       }
@@ -408,15 +408,15 @@ export default function ProcessosPage() {
   }
 
   async function avancarEstagio() {
-    if (!banhoAberto || !banhoAberto.estagio) return;
-    const proximo = NEXT_ESTAGIO[banhoAberto.estagio];
+    if (!banhoAberto) return;
+    const proximo = NEXT_ESTAGIO[activeTab];
     if (!proximo) return;
     setAvancando(true);
     try {
       for (const traveId of travesSelecionadasMover) {
         const trave = travesPorBanho[banhoAberto.id]?.find((t) => t.traveId === traveId);
-        if (!trave?.traveBanhoId) continue;
-        await api.put(`/trave_banho/${trave.traveBanhoId}/avancar-estagio`, {
+        if (!trave?.sessaoId) continue;
+        await api.put(`/trave_sessao/${trave.sessaoId}/avancar-estagio`, {
           proximoEstagio: proximo,
         });
       }
@@ -443,9 +443,9 @@ export default function ProcessosPage() {
       for (const traveId of travesIniciarSelecionadas) {
         const trave = travesAguardando.find((t) => t.traveId === traveId);
         if (!trave) continue;
-        await api.post('/trave_banho', {
+        await api.post('/trave_sessao', {
           processoId: trave.processoId,
-          traveId: [traveId],
+          traveIds: [traveId],
           banhoId: banhoIniciarId,
         });
       }
@@ -477,9 +477,9 @@ export default function ProcessosPage() {
     if (adicionarProcessoId === null || adicionarTraveId === null || adicionarBanhoId === null) return;
     try {
       await api.post(`/processo/${adicionarProcessoId}/trave`, { traveId: adicionarTraveId });
-      await api.post('/trave_banho', {
+      await api.post('/trave_sessao', {
         processoId: adicionarProcessoId,
-        traveId: [adicionarTraveId],
+        traveIds: [adicionarTraveId],
         banhoId: adicionarBanhoId,
       });
       fecharModalAdicionar();
@@ -514,15 +514,15 @@ export default function ProcessosPage() {
 
   // ── Derivados ──────────────────────────────────────────────────────────────
 
-  const banhosFiltrados = banhos.filter((b) => b.estagio === activeTab);
-  const proximoEstagio = banhoAberto?.estagio ? NEXT_ESTAGIO[banhoAberto.estagio] : undefined;
+  const banhosFiltrados = banhos.filter((b) => b.areas.some((a) => a.nome === activeTab));
+  const proximoEstagio = banhoAberto ? NEXT_ESTAGIO[activeTab] : undefined;
 
   const banhosDestinoMesmoEstagio = banhoAberto
-    ? banhos.filter((b) => b.estagio === banhoAberto.estagio && b.id !== banhoAberto.id)
+    ? banhos.filter((b) => b.areas.some((a) => a.nome === activeTab) && b.id !== banhoAberto.id)
     : [];
 
   const aguardandoNesteEstagio = travesAguardando.filter(
-    (t) => t.estagioAguardando === activeTab
+    (t) => t.estagioAtual === activeTab
   );
 
   // ── Render ─────────────────────────────────────────────────────────────────
@@ -1012,7 +1012,7 @@ export default function ProcessosPage() {
               </p>
               <div className="flex flex-wrap gap-2">
                 {banhos
-                  .filter((b) => b.estagio === 'PRE_TRATAMENTO')
+                  .filter((b) => b.areas.some((a) => a.nome === 'PRE_TRATAMENTO'))
                   .map((b) => (
                     <button
                       key={b.id}

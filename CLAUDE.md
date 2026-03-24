@@ -9,7 +9,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Frontend:** `Ramajo/` — React 19 + TypeScript + Vite + Tailwind CSS 4
 - **Backend:** `gestorProc/` — Spring Boot 3 + Java 21 + MySQL via JPA/Hibernate
 - **API Base URL (dev):** `http://localhost:8080/api`
+- **API Base URL (`shared.ts` current):** `http://129.148.62.223:8080/api` — points to a remote server; change to `localhost` for local dev
 - **Frontend Dev Port:** `5174` (configured in CorsConfig)
+- **Docker Compose:** `docker-compose.yaml` at repo root spins up MySQL + Spring Boot API (:8080) + Frontend via Nginx (:80)
 
 ---
 
@@ -74,6 +76,7 @@ When a session ends via `PUT /trave_banho/{id}/avancar-estagio`, the root link's
 | PUT | `/api/processo/finalizar/{id}` | Complete process, close open sessions, free traves |
 | GET | `/api/processo/{id}/traves` | Current state of each trave (calls `TraveEstadoDTO`) |
 | GET | `/api/processo/{id}/historico` | Full banho session history for a processo |
+| POST | `/api/processo/{id}/trave` | Add a trave to an existing active processo |
 | GET | `/api/trave/disponiveis` | Available traves (`emUso = false`) |
 | POST | `/api/trave_banho` | Start a banho session; clears `estagioAguardando` on root link |
 | PUT | `/api/trave_banho/finalizar/{id}` | Finish a banho session (same stage moves) |
@@ -83,13 +86,14 @@ Swagger UI: `http://localhost:8080/swagger-ui.html` (springdoc-openapi).
 
 ### Frontend Architecture
 
-**Routing** (`main.tsx`): React Router v6 with two routes under `App` layout shell:
+**Routing** (`main.tsx`): React Router v6 with three routes under `App` layout shell:
 - `/` → `ProcessosPage`
 - `/cadastros` → `CadastrosPage`
+- `/registros` → `RegistrosPage`
 
 **`App.tsx`** — Layout only: navbar with NavLink tabs, renders `<Outlet />`.
 
-**`shared.ts`** — Single source for all TypeScript types (`TraveEstado`, `TraveEmBanho`, `Banho`, `Processo`, `Estagio`, etc.) and the Axios instance (`api`, base URL `http://localhost:8080/api`).
+**`shared.ts`** — Single source for all TypeScript types (`TraveEstado`, `TraveEmBanho`, `Banho`, `Processo`, `Estagio`, `TraveBanhoHistorico`, etc.), the Axios instance (`api`), and shared utility functions: `formatarTempo(minutes)`, `calcularProgressoBanho(iniciadoEm, tempoBanhoMinutos)`, `formatarTempoDecorrido(iniciadoEm)`.
 
 **`ProcessosPage.tsx`** — Main operational view. Three-tab stepper (PRE_TRATAMENTO / TRATAMENTO / POS_TRATAMENTO):
 - **PRE_TRATAMENTO / TRATAMENTO:** Amber strip showing traves with `estagioAguardando` matching the active tab + BanhoCards for active sessions. Modal "Iniciar tratamento" to start sessions; modal "Mover traves" to move within-stage or advance to next stage.
@@ -97,5 +101,7 @@ Swagger UI: `http://localhost:8080/swagger-ui.html` (springdoc-openapi).
 - `carregarTudo()` fetches `/processo/ativo` then calls `/processo/{id}/traves` for each active processo in parallel. Builds `travesPorBanho` (active sessions by banhoId), `travesAguardando` (root links with non-null `estagioAguardando`), and `processosPos` (processes with at least one POS_TRATAMENTO trave).
 
 **`CadastrosPage.tsx`** — CRUD for Traves and Banhos.
+
+**`RegistrosPage.tsx`** — Read-only view of completed processes (`/processo/inativo`). Each process card is expandable; banho session history (`/processo/{id}/historico`) is lazy-loaded on first expand and cached in component state.
 
 **`components/Modal.tsx`** — Reusable modal accepting `title`, `description`, `footer`, `variant`, and `wide` props.

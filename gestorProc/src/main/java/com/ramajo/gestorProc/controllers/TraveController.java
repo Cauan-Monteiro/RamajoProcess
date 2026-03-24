@@ -1,8 +1,8 @@
 package com.ramajo.gestorProc.controllers;
 
 import com.ramajo.gestorProc.dto.TraveResponseDTO;
+import com.ramajo.gestorProc.dto.TraveUpdateRequestDTO;
 import com.ramajo.gestorProc.entities.Trave;
-
 import com.ramajo.gestorProc.repositories.TraveRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -17,59 +17,54 @@ public class TraveController {
     @Autowired
     private TraveRepository repo;
 
-
     @GetMapping
-    public List<Trave> listar()
-    {
-        return repo.findAll();
+    public List<TraveResponseDTO> listar() {
+        return repo.findAll().stream()
+                .map(t -> new TraveResponseDTO(
+                        t.getId(), t.getNome(), t.getEmUso(),
+                        t.getEstagioAtual(),
+                        t.getProcessoAtual() != null ? t.getProcessoAtual().getId() : null))
+                .toList();
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<?> findById(@PathVariable Long id){
+    public ResponseEntity<?> findById(@PathVariable Long id) {
         return ResponseEntity.ok(repo.findById(id));
     }
 
     @GetMapping("/disponiveis")
     public List<TraveResponseDTO> disponiveis() {
-        List<Trave> travesLivres = repo.findByEmUsoFalse();
-
-        return travesLivres.stream()
-                .map(trave -> new TraveResponseDTO(
-                        trave.getId(),
-                        trave.getNome()
-                ))
+        return repo.findByEmUsoFalse().stream()
+                .map(t -> new TraveResponseDTO(
+                        t.getId(), t.getNome(), false, null, null))
                 .toList();
     }
 
-    @PutMapping("/uso/{id}")
-    public ResponseEntity<?> changeUso(@PathVariable Long id){
+    @PostMapping
+    public Trave save(@RequestBody Trave novo) {
+        return repo.save(novo);
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<Trave> update(@PathVariable Long id,
+                                        @RequestBody TraveUpdateRequestDTO dto) {
         return repo.findById(id)
                 .map(t -> {
-                    t.setEmUso(!t.getEmUso());
-                    repo.save(t);
-                    return ResponseEntity.ok().build();
+                    t.setNome(dto.nome());
+                    return ResponseEntity.ok(repo.save(t));
                 })
                 .orElseThrow(() -> new RuntimeException("Trave não encontrada"));
     }
 
-    @PutMapping("/{id}")
-    public Trave update(@PathVariable Long id, @RequestBody Trave atualizado){
-        return repo.findById(id)
-                .map(t -> {
-                    t.setNome(atualizado.getNome());
-                    t.setEmUso(atualizado.getEmUso());
-                    return repo.save(t);
-                })
-                .orElseThrow(() -> new RuntimeException("Trave não encontrado"));
-    }
-
-    @PostMapping
-    public Trave save(@RequestBody Trave novo){
-        return repo.save(novo);
-    }
-
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deletar(@PathVariable Long id){
+    public ResponseEntity<Void> deletar(@PathVariable Long id) {
+        Trave trave = repo.findById(id)
+                .orElseThrow(() -> new RuntimeException("Trave não encontrada"));
+
+        if (Boolean.TRUE.equals(trave.getEmUso())) {
+            return ResponseEntity.status(409).build();
+        }
+
         repo.deleteById(id);
         return ResponseEntity.noContent().build();
     }

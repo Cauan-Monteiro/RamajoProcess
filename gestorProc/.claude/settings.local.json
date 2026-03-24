@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(BASE=\"/c/Users/cauan-monteiro/OneDrive - PUCRS - BR/GestorProcessosRamajo/gestorProc/src/main/java/com/ramajo/gestorProc\")",
+      "Bash(__NEW_LINE_f1eaeb2711ec1ad2__ rm:*)"
+    ]
+  }
+}

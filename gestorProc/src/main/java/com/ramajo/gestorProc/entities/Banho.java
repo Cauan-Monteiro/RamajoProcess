@@ -1,9 +1,8 @@
 package com.ramajo.gestorProc.entities;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.ramajo.gestorProc.enums.Estagio;
 import jakarta.persistence.*;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
@@ -16,18 +15,19 @@ public class Banho {
 
     private String nome;
     private String descricao;
-    private Float tempoBanho;
+    private Integer tempoBanho;
 
-    @Enumerated(EnumType.STRING)
-    private Estagio estagio;
-
-    @JsonIgnore
-    @OneToMany(mappedBy = "banho")
-    private List<TraveBanho> historicoTraves;
+    @ManyToMany
+    @JoinTable(
+        name = "banho_area_producao",
+        joinColumns = @JoinColumn(name = "banho_id"),
+        inverseJoinColumns = @JoinColumn(name = "area_producao_id")
+    )
+    private List<AreaProducao> areas = new ArrayList<>();
 
     public Banho() {}
 
-    public Banho(String nome, String descricao, Float tempoBanho) {
+    public Banho(String nome, String descricao, Integer tempoBanho) {
         this.nome = nome;
         this.descricao = descricao;
         this.tempoBanho = tempoBanho;
@@ -53,26 +53,21 @@ public class Banho {
         this.descricao = descricao;
     }
 
-    public Float getTempoBanho() {
+    public Integer getTempoBanho() {
         return tempoBanho;
     }
 
-    public void setTempoBanho(Float tempoBanho) {
+    public void setTempoBanho(Integer tempoBanho) {
         this.tempoBanho = tempoBanho;
     }
 
-    public Estagio getEstagio() {
-        return estagio;
+    public List<AreaProducao> getAreas() {
+        return areas;
     }
 
-    public void setEstagio(Estagio estagio) {
-        this.estagio = estagio;
+    public void setAreas(List<AreaProducao> areas) {
+        this.areas = areas;
     }
-
-    public List<TraveBanho> getHistoricoTraves() {
-        return historicoTraves;
-    }
-
 
     @Override
     public boolean equals(Object o) {
@@ -88,11 +83,6 @@ public class Banho {
 
     @Override
     public String toString() {
-        return "Banho{" +
-                "id=" + id +
-                ", nome='" + nome + '\'' +
-                ", descricao='" + descricao + '\'' +
-                ", tempoBanho=" + tempoBanho +
-                '}';
+        return "Banho{id=" + id + ", nome='" + nome + "', tempoBanho=" + tempoBanho + '}';
     }
 }

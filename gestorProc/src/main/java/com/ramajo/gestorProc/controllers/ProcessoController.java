@@ -3,22 +3,24 @@ package com.ramajo.gestorProc.controllers;
 import com.ramajo.gestorProc.dto.AdicionarTraveRequestDTO;
 import com.ramajo.gestorProc.dto.ProcessoRequestDTO;
 import com.ramajo.gestorProc.dto.ProcessoResponseDTO;
+import com.ramajo.gestorProc.dto.SessaoHistoricoDTO;
 import com.ramajo.gestorProc.dto.TraveEstadoDTO;
-import com.ramajo.gestorProc.dto.TraveBanhoHistoricoDTO;
 import com.ramajo.gestorProc.entities.Processo;
 import com.ramajo.gestorProc.entities.Trave;
-import com.ramajo.gestorProc.entities.TraveBanho;
+import com.ramajo.gestorProc.entities.TraveSessao;
 import com.ramajo.gestorProc.repositories.ProcessoRepository;
-import com.ramajo.gestorProc.repositories.TraveBanhoRepository;
+import com.ramajo.gestorProc.repositories.TraveSessaoRepository;
 import com.ramajo.gestorProc.repositories.TraveRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
-import java.util.Date;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/processo")
@@ -29,101 +31,75 @@ public class ProcessoController {
     @Autowired
     private TraveRepository traveRepo;
     @Autowired
-    private TraveBanhoRepository traveBanhoRepo;
+    private TraveSessaoRepository sessaoRepo;
 
     @GetMapping
-    public List<Processo> findAll(){
+    public List<Processo> findAll() {
         return repo.findAll();
     }
 
     @GetMapping("/ativo")
     public List<ProcessoResponseDTO> findAllAtivos() {
-        List<Processo> processosAtivos = repo.findByFinishedAtIsNull();
-
-        return processosAtivos.stream()
+        return repo.findByFinishedAtIsNull().stream()
                 .map(processo -> {
-                    List<String> nomes = processo.getHistoricoBanhos().stream()
-                            .map(tb -> tb.getTrave().getNome())
-                            .distinct()
-                            .toList();
-
+                    List<String> nomes = traveRepo.findByProcessoAtual_Id(processo.getId())
+                            .stream().map(Trave::getNome).toList();
                     return new ProcessoResponseDTO(
-                            processo.getId(),
-                            processo.getNumOS(),
-                            processo.getCreatedAt(),
-                            null,
-                            null,
-                            nomes
-                    );
+                            processo.getId(), processo.getNumOS(),
+                            processo.getCreatedAt(), null, null, nomes);
                 })
                 .toList();
     }
 
     @GetMapping("/inativo")
     public List<ProcessoResponseDTO> findInativos() {
-        List<Processo> processosInativos = repo.findByFinishedAtIsNotNull();
-
-        return processosInativos.stream()
+        return repo.findByFinishedAtIsNotNull().stream()
                 .map(processo -> {
-                    List<String> nomes = processo.getHistoricoBanhos().stream()
-                            .map(tb -> tb.getTrave().getNome())
-                            .distinct()
-                            .toList();
-
+                    List<String> nomes = sessaoRepo.findByProcesso_IdOrderByIniciadoEmAsc(processo.getId())
+                            .stream().map(s -> s.getTrave().getNome()).distinct().toList();
                     long minutos = ChronoUnit.MINUTES.between(
-                            processo.getCreatedAt().toInstant(),
-                            processo.getFinishedAt().toInstant()
-                    );
-
+                            processo.getCreatedAt(), processo.getFinishedAt());
                     return new ProcessoResponseDTO(
-                            processo.getId(),
-                            processo.getNumOS(),
-                            processo.getCreatedAt(),
-                            processo.getFinishedAt(),
-                            minutos,
-                            nomes
-                    );
+                            processo.getId(), processo.getNumOS(),
+                            processo.getCreatedAt(), processo.getFinishedAt(),
+                            minutos, nomes);
                 })
                 .toList();
     }
 
-    // Retorna o estado atual de cada trave do processo (em qual banho está, desde quando)
     @GetMapping("/{id}/traves")
     public ResponseEntity<List<TraveEstadoDTO>> getTraveEstado(@PathVariable Long id) {
         repo.findById(id)
                 .orElseThrow(() -> new RuntimeException("Processo não encontrado"));
 
-        List<TraveBanho> links = traveBanhoRepo.findByProcesso_IdAndBanhoIsNull(id);
-        List<TraveBanho> sessoeAtivas = traveBanhoRepo.findByProcesso_IdAndBanhoIsNotNullAndFinishedAtIsNull(id);
+        List<Trave> traves = traveRepo.findByProcessoAtual_Id(id);
 
-        List<TraveEstadoDTO> resultado = links.stream().map(link -> {
-            Trave trave = link.getTrave();
+        Map<Long, TraveSessao> sessaoAtivaPorTrave = sessaoRepo
+                .findByProcesso_IdAndFinalizadoEmIsNull(id)
+                .stream()
+                .collect(Collectors.toMap(s -> s.getTrave().getId(), s -> s));
 
-            TraveBanho sessaoAtiva = sessoeAtivas.stream()
-                    .filter(tb -> tb.getTrave().getId().equals(trave.getId()))
-                    .findFirst()
-                    .orElse(null);
-
-            if (sessaoAtiva != null) {
+        List<TraveEstadoDTO> resultado = traves.stream().map(trave -> {
+            TraveSessao sessao = sessaoAtivaPorTrave.get(trave.getId());
+            if (sessao != null) {
+                List<String> areas = sessao.getBanho().getAreas()
+                        .stream().map(a -> a.getNome().name()).toList();
                 return new TraveEstadoDTO(
-                        trave.getId(),
-                        trave.getNome(),
+                        trave.getId(), trave.getNome(),
+                        trave.getEstagioAtual(),
                         true,
-                        sessaoAtiva.getId(),
-                        sessaoAtiva.getBanho().getId(),
-                        sessaoAtiva.getBanho().getNome(),
-                        sessaoAtiva.getBanho().getTempoBanho(),
-                        sessaoAtiva.getBanho().getEstagio(),
-                        sessaoAtiva.getIniciadoEm(),
-                        null
+                        sessao.getId(),
+                        sessao.getBanho().getId(), sessao.getBanho().getNome(),
+                        sessao.getBanho().getTempoBanho(),
+                        areas,
+                        sessao.getIniciadoEm()
                 );
             } else {
                 return new TraveEstadoDTO(
-                        trave.getId(),
-                        trave.getNome(),
+                        trave.getId(), trave.getNome(),
+                        trave.getEstagioAtual(),
                         false,
-                        null, null, null, null, null, null,
-                        link.getEstagioAguardando()
+                        null, null, null, null, null, null
                 );
             }
         }).toList();
@@ -131,86 +107,80 @@ public class ProcessoController {
         return ResponseEntity.ok(resultado);
     }
 
-    // Retorna o histórico completo de sessões de banho de um processo
     @GetMapping("/{id}/historico")
-    public ResponseEntity<List<TraveBanhoHistoricoDTO>> getHistorico(@PathVariable Long id) {
+    public ResponseEntity<List<SessaoHistoricoDTO>> getHistorico(@PathVariable Long id) {
         repo.findById(id)
                 .orElseThrow(() -> new RuntimeException("Processo não encontrado"));
 
-        List<TraveBanho> sessoes = traveBanhoRepo.findByProcesso_IdAndBanhoIsNotNullOrderByCreatedAtAsc(id);
-
-        List<TraveBanhoHistoricoDTO> resultado = sessoes.stream().map(tb -> {
-            Long duracao = null;
-            if (tb.getFinishedAt() != null) {
-                java.time.Instant inicio = tb.getIniciadoEm() != null
-                        ? tb.getIniciadoEm().toInstant()
-                        : tb.getCreatedAt().toInstant();
-                duracao = ChronoUnit.MINUTES.between(inicio, tb.getFinishedAt().toInstant());
-            }
-            return new TraveBanhoHistoricoDTO(
-                    tb.getId(),
-                    tb.getTrave().getId(),
-                    tb.getTrave().getNome(),
-                    tb.getBanho().getId(),
-                    tb.getBanho().getNome(),
-                    tb.getBanho().getTempoBanho(),
-                    tb.getBanho().getEstagio(),
-                    tb.getIniciadoEm(),
-                    tb.getFinishedAt(),
-                    duracao
-            );
-        }).toList();
+        List<SessaoHistoricoDTO> resultado = sessaoRepo
+                .findByProcesso_IdOrderByIniciadoEmAsc(id)
+                .stream().map(s -> new SessaoHistoricoDTO(
+                        s.getId(),
+                        s.getTrave().getId(), s.getTrave().getNome(),
+                        s.getBanho().getId(), s.getBanho().getNome(),
+                        s.getBanho().getTempoBanho(),
+                        s.getIniciadoEm(), s.getFinalizadoEm(),
+                        s.getDuracaoMinutos()
+                )).toList();
 
         return ResponseEntity.ok(resultado);
+    }
+
+    @Transactional
+    @PostMapping
+    public ResponseEntity<Processo> criar(@RequestBody ProcessoRequestDTO dto) {
+        Processo novo = new Processo(dto.numOS());
+        Processo salvo = repo.save(novo);
+
+        for (Long traveId : dto.idsTraves()) {
+            Trave trave = traveRepo.findById(traveId)
+                    .orElseThrow(() -> new RuntimeException("Trave não encontrada: " + traveId));
+            trave.setEmUso(true);
+            trave.setProcessoAtual(salvo);
+            trave.setEstagioAtual(null);
+            traveRepo.save(trave);
+        }
+
+        return ResponseEntity.ok(salvo);
     }
 
     @Transactional
     @PutMapping("/finalizar/{id}")
     public ResponseEntity<ProcessoResponseDTO> finalizarProcesso(@PathVariable Long id) {
-        Processo registro = repo.findById(id)
-                .orElseThrow(() -> new RuntimeException("Registro de processo não encontrado"));
+        Processo processo = repo.findById(id)
+                .orElseThrow(() -> new RuntimeException("Processo não encontrado"));
 
-        registro.setFinishedAt(new Date());
+        LocalDateTime agora = LocalDateTime.now();
 
-        // Fechar todas as sessões de banho ainda abertas
-        registro.getHistoricoBanhos().stream()
-                .filter(tb -> tb.getBanho() != null && tb.getFinishedAt() == null)
-                .forEach(tb -> {
-                    tb.setFinishedAt(new Date());
-                    traveBanhoRepo.save(tb);
-                });
-
-        long minutos = ChronoUnit.MINUTES.between(
-                registro.getCreatedAt().toInstant(),
-                registro.getFinishedAt().toInstant()
-        );
-
-        ProcessoResponseDTO response = new ProcessoResponseDTO(
-                registro.getId(),
-                registro.getNumOS(),
-                registro.getCreatedAt(),
-                registro.getFinishedAt(),
-                minutos,
-                null
-        );
+        // Fechar todas as sessões abertas deste processo
+        sessaoRepo.findByProcesso_IdAndFinalizadoEmIsNull(id).forEach(sessao -> {
+            sessao.setFinalizadoEm(agora);
+            sessao.setDuracaoMinutos(ChronoUnit.MINUTES.between(sessao.getIniciadoEm(), agora));
+            sessaoRepo.save(sessao);
+        });
 
         // Liberar todas as traves do processo
-        registro.getHistoricoBanhos().stream()
-                .filter(tb -> tb.getBanho() == null)
-                .forEach(tb -> {
-                    Trave t = tb.getTrave();
-                    t.setEmUso(false);
-                    traveRepo.save(t);
-                });
+        traveRepo.findByProcessoAtual_Id(id).forEach(trave -> {
+            trave.setEmUso(false);
+            trave.setProcessoAtual(null);
+            trave.setEstagioAtual(null);
+            traveRepo.save(trave);
+        });
 
-        repo.save(registro);
+        processo.setFinishedAt(agora);
+        repo.save(processo);
 
-        return ResponseEntity.ok(response);
+        long minutos = ChronoUnit.MINUTES.between(processo.getCreatedAt(), agora);
+
+        return ResponseEntity.ok(new ProcessoResponseDTO(
+                processo.getId(), processo.getNumOS(),
+                processo.getCreatedAt(), agora, minutos, null));
     }
 
     @Transactional
     @PostMapping("/{id}/trave")
-    public ResponseEntity<Void> adicionarTrave(@PathVariable Long id, @RequestBody AdicionarTraveRequestDTO dto) {
+    public ResponseEntity<Void> adicionarTrave(@PathVariable Long id,
+                                               @RequestBody AdicionarTraveRequestDTO dto) {
         Processo processo = repo.findById(id)
                 .orElseThrow(() -> new RuntimeException("Processo não encontrado"));
 
@@ -218,31 +188,10 @@ public class ProcessoController {
                 .orElseThrow(() -> new RuntimeException("Trave não encontrada"));
 
         trave.setEmUso(true);
+        trave.setProcessoAtual(processo);
+        trave.setEstagioAtual(null);
         traveRepo.save(trave);
 
-        TraveBanho vinculo = new TraveBanho(processo, trave, null);
-        traveBanhoRepo.save(vinculo);
-
         return ResponseEntity.status(201).build();
-    }
-
-    @Transactional
-    @PostMapping
-    public ResponseEntity<Processo> criar(@RequestBody ProcessoRequestDTO dto) {
-        Processo novo = new Processo(dto.numOS());
-        novo.setCreatedAt(new Date());
-        Processo salvo = repo.save(novo);
-
-        for (Long traveId : dto.idsTraves()) {
-            Trave trave = traveRepo.findById(traveId)
-                    .orElseThrow(() -> new RuntimeException("Trave não encontrada: " + traveId));
-
-            trave.setEmUso(true);
-
-            TraveBanho vinculo = new TraveBanho(salvo, trave, null);
-            traveBanhoRepo.save(vinculo);
-            traveRepo.save(trave);
-        }
-        return ResponseEntity.ok(novo);
     }
 }
