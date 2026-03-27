@@ -94,8 +94,8 @@ export default function CadastrosPage() {
     try {
       const response = await api.get('/trave');
       setTodasTraves(response.data);
-    } catch (erro) {
-      console.error('Erro ao carregar traves:', erro);
+    } catch {
+      /* silent */
     }
   }
 
@@ -103,8 +103,8 @@ export default function CadastrosPage() {
     try {
       const response = await api.get('/banho');
       setBanhos(response.data);
-    } catch (erro) {
-      console.error('Erro ao carregar banhos:', erro);
+    } catch {
+      /* silent */
     }
   }
 
@@ -112,8 +112,8 @@ export default function CadastrosPage() {
     try {
       const response = await api.get('/area');
       setAreasDisponiveis(response.data);
-    } catch (erro) {
-      console.error('Erro ao carregar áreas:', erro);
+    } catch {
+      /* silent */
     }
   }
 
@@ -140,8 +140,7 @@ export default function CadastrosPage() {
         message: `A trave "${nomeNovaTrave.trim()}" foi adicionada com sucesso.`,
         type: 'success',
       });
-    } catch (erro) {
-      console.error('Erro ao criar trave:', erro);
+    } catch {
       setAlertState({
         open: true,
         title: 'Erro ao criar trave',
@@ -165,8 +164,7 @@ export default function CadastrosPage() {
         message: 'O nome da trave foi atualizado com sucesso.',
         type: 'success',
       });
-    } catch (erro) {
-      console.error('Erro ao editar trave:', erro);
+    } catch {
       setAlertState({
         open: true,
         title: 'Erro ao editar trave',
@@ -186,8 +184,7 @@ export default function CadastrosPage() {
         message: `A trave "${nome}" foi removida.`,
         type: 'success',
       });
-    } catch (erro) {
-      console.error('Erro ao remover trave:', erro);
+    } catch {
       setAlertState({
         open: true,
         title: 'Erro ao remover trave',
@@ -227,8 +224,7 @@ export default function CadastrosPage() {
         message: `Banho "${novoBanho.nome}" adicionado com sucesso.`,
         type: 'success',
       });
-    } catch (erro) {
-      console.error('Erro ao criar banho:', erro);
+    } catch {
       setAlertState({
         open: true,
         title: 'Erro',
@@ -255,8 +251,7 @@ export default function CadastrosPage() {
         message: 'Banho atualizado com sucesso.',
         type: 'success',
       });
-    } catch (erro) {
-      console.error('Erro ao editar banho:', erro);
+    } catch {
       setAlertState({
         open: true,
         title: 'Erro',
@@ -278,8 +273,7 @@ export default function CadastrosPage() {
           message: `"${nome}" removido.`,
           type: 'success',
         });
-      } catch (erro) {
-        console.error('Erro ao remover banho:', erro);
+      } catch {
         setAlertState({
           open: true,
           title: 'Erro',

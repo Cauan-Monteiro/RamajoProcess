@@ -57,20 +57,35 @@ function BanhoCard({
     return () => clearInterval(id);
   }, []);
 
+  const compartilhado = banho.areas.length > 1;
+
   return (
     <div
       onClick={onClick}
-      className={`bg-white rounded-xl border shadow-md px-5 py-5 cursor-pointer hover:shadow-lg transition-all border-l-4 ${
-        traves.length > 0 ? 'border-l-cyan-400' : 'border-l-slate-200'
+      className={`bg-white rounded-xl border shadow-md px-5 py-5 cursor-pointer hover:shadow-lg active:scale-[0.99] active:shadow-sm transition-all border-l-4 ${
+        traves.length > 0
+          ? compartilhado ? 'border-l-violet-400' : 'border-l-cyan-400'
+          : 'border-l-slate-200'
       } border-slate-100`}
     >
       <div className="flex items-center justify-between mb-1">
-        <span className="text-base font-bold text-slate-800">{banho.nome}</span>
+        <div className="flex items-center gap-2">
+          <span className="text-base font-bold text-slate-800">{banho.nome}</span>
+          {compartilhado && (
+            <span className="inline-flex items-center rounded-full bg-violet-50 px-2 py-0.5 text-xs font-medium text-violet-600 border border-violet-200">
+              Compartilhado
+            </span>
+          )}
+        </div>
         <div className="flex items-center gap-2">
           {traves.length > 0 && (
             <span className={`h-2.5 w-2.5 rounded-full ${corCard(traves)}`} />
           )}
-          <span className="inline-flex items-center rounded-full bg-cyan-50 px-3 py-0.5 text-sm font-semibold text-cyan-700 border border-cyan-200">
+          <span className={`inline-flex items-center rounded-full px-3 py-0.5 text-sm font-semibold border ${
+            compartilhado
+              ? 'bg-violet-50 text-violet-700 border-violet-200'
+              : 'bg-cyan-50 text-cyan-700 border-cyan-200'
+          }`}>
             {traves.length} {traves.length === 1 ? 'trave' : 'traves'}
           </span>
         </div>
@@ -83,14 +98,14 @@ function BanhoCard({
           {traves.map((t) => (
             <li
               key={t.traveId}
-              className="flex items-center justify-between rounded-lg bg-slate-50 border border-slate-200 px-3 py-2 text-xs"
+              className="flex items-center justify-between rounded-lg bg-slate-50 border border-slate-200 px-3 py-2.5 text-sm"
             >
               <span>
                 <span className="font-medium text-slate-800">{t.traveNome}</span>
                 <span className="text-slate-400 ml-1.5">OS {t.processoNumOS}</span>
               </span>
               {t.iniciadoEm && (
-                <span className={`text-xs tabular-nums font-medium ${corTempo(t.iniciadoEm, t.tempoBanho)}`}>
+                <span className={`text-sm tabular-nums font-medium ${corTempo(t.iniciadoEm, t.tempoBanho)}`}>
                   {formatarTempoDecorrido(t.iniciadoEm)}
                 </span>
               )}
@@ -107,9 +122,11 @@ function BanhoCard({
 function ProcessoPosCard({
   processo,
   onFinalizar,
+  onLiberarTrave,
 }: {
   processo: ProcessoPos;
   onFinalizar: (id: number) => void;
+  onLiberarTrave: (processoId: number, traveId: number) => void;
 }) {
   return (
     <div className={`bg-white rounded-xl border shadow-md px-5 py-5 border-l-4 ${
@@ -126,7 +143,7 @@ function ProcessoPosCard({
           type="button"
           disabled={!processo.prontoParaFinalizar}
           onClick={() => onFinalizar(processo.processoId)}
-          className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="rounded-lg bg-emerald-600 px-5 py-3 text-base font-semibold text-white hover:bg-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           Finalizar processo
         </button>
@@ -145,8 +162,21 @@ function ProcessoPosCard({
               }`}
             >
               <span className="font-medium">{t.traveNome}</span>
-              {!pronta && <span className="text-xs opacity-70">em tratamento</span>}
-              {pronta && <span className="text-xs font-semibold">✓ pronta</span>}
+              <div className="flex items-center gap-2">
+                {!pronta && <span className="text-sm opacity-70">em tratamento</span>}
+                {pronta && (
+                  <>
+                    <span className="text-sm font-semibold">✓ pronta</span>
+                    <button
+                      type="button"
+                      onClick={() => onLiberarTrave(processo.processoId, t.traveId)}
+                      className="rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700 transition-colors min-w-[72px]"
+                    >
+                      Liberar
+                    </button>
+                  </>
+                )}
+              </div>
             </li>
           );
         })}
@@ -173,7 +203,12 @@ const TABS: Estagio[] = ['PRE_TRATAMENTO', 'TRATAMENTO', 'POS_TRATAMENTO'];
 
 const NEXT_ESTAGIO: Partial<Record<Estagio, Estagio>> = {
   PRE_TRATAMENTO: 'TRATAMENTO',
-  TRATAMENTO:     'POS_TRATAMENTO',
+  TRATAMENTO: 'POS_TRATAMENTO',
+};
+
+const PREV_ESTAGIO: Partial<Record<Estagio, Estagio>> = {
+  TRATAMENTO: 'PRE_TRATAMENTO',
+  POS_TRATAMENTO: 'TRATAMENTO',
 };
 
 export default function ProcessosPage() {
@@ -184,25 +219,19 @@ export default function ProcessosPage() {
   // ── Banhos & traves por banho ──────────────────────────────────────────────
   const [banhos, setBanhos] = useState<Banho[]>([]);
   const [travesPorBanho, setTravesPorBanho] = useState<Record<number, TraveEmBanho[]>>({});
-  const [travesAguardando, setTravesAguardando] = useState<TraveEmBanho[]>([]);
 
   // ── Modal mover traves ─────────────────────────────────────────────────────
   const [banhoAberto, setBanhoAberto] = useState<Banho | null>(null);
   const [travesSelecionadasMover, setTravesSelecionadasMover] = useState<number[]>([]);
   const [banhoDestinoId, setBanhoDestinoId] = useState<number | null>(null);
   const [movendo, setMovendo] = useState(false);
-  const [avancando, setAvancando] = useState(false);
+  const [concluindo, setConcluindo] = useState(false);
 
   // ── Modal criar processo ───────────────────────────────────────────────────
   const [isModalCriarOpen, setIsModalCriarOpen] = useState(false);
   const [novoNumOS, setNovoNumOS] = useState('');
   const [travesSelecionadas, setTravesSelecionadas] = useState<number[]>([]);
   const [travesLivres, setTravesLivres] = useState<Trave[]>([]);
-
-  // ── Modal iniciar tratamento (TRATAMENTO) ──────────────────────────────────
-  const [isModalIniciarOpen, setIsModalIniciarOpen] = useState(false);
-  const [travesIniciarSelecionadas, setTravesIniciarSelecionadas] = useState<number[]>([]);
-  const [banhoIniciarId, setBanhoIniciarId] = useState<number | null>(null);
 
   // ── Processos ativos (para modal adicionar trave) ──────────────────────────
   const [processosAtivos, setProcessosAtivos] = useState<{ id: number; numOS: string }[]>([]);
@@ -245,7 +274,6 @@ export default function ProcessosPage() {
       setProcessosAtivos(processos);
 
       const travesAtivasMap: Record<number, TraveEmBanho[]> = {};
-      const aguardandoList: TraveEmBanho[] = [];
       const processosPosMap: Record<number, ProcessoPos> = {};
 
       await Promise.all(
@@ -262,8 +290,6 @@ export default function ProcessosPage() {
               if (t.emSessao && t.banhoId !== null) {
                 if (!travesAtivasMap[t.banhoId]) travesAtivasMap[t.banhoId] = [];
                 travesAtivasMap[t.banhoId].push(t);
-              } else if (t.estagioAtual !== null) {
-                aguardandoList.push(t);
               }
             }
 
@@ -284,7 +310,6 @@ export default function ProcessosPage() {
       );
 
       setTravesPorBanho(travesAtivasMap);
-      setTravesAguardando(aguardandoList);
       setProcessosPos(Object.values(processosPosMap));
     } catch (err) {
       console.error('Erro ao carregar dados:', err);
@@ -295,8 +320,8 @@ export default function ProcessosPage() {
     try {
       const res = await api.get('/trave/disponiveis');
       setTravesLivres(res.data);
-    } catch (err) {
-      console.error('Erro ao carregar traves livres:', err);
+    } catch {
+      /* silent — modal de criar processo simplesmente não exibe traves */
     }
   }
 
@@ -353,8 +378,7 @@ export default function ProcessosPage() {
           : 'Processo criado, mas o banho Sabão não foi encontrado.',
         type: 'success',
       });
-    } catch (erro) {
-      console.error('Erro ao criar processo:', erro);
+    } catch {
       setAlertState({
         open: true,
         title: 'Erro ao criar processo',
@@ -368,8 +392,11 @@ export default function ProcessosPage() {
 
   function abrirModalBanho(banho: Banho) {
     setBanhoAberto(banho);
-    setTravesSelecionadasMover([]);
-    setBanhoDestinoId(null);
+    setTravesSelecionadasMover(
+      (travesPorBanho[banho.id] ?? []).map((t) => t.traveId)
+    );
+    const destinos = banhosFiltrados.filter((b) => b.id !== banho.id);
+    setBanhoDestinoId(destinos.length === 1 ? destinos[0].id : null);
   }
 
   function fecharModalMover() {
@@ -394,8 +421,7 @@ export default function ProcessosPage() {
       }
       fecharModalMover();
       await carregarTudo();
-    } catch (err) {
-      console.error('Erro ao mover traves:', err);
+    } catch {
       setAlertState({
         open: true,
         title: 'Erro ao mover traves',
@@ -407,60 +433,28 @@ export default function ProcessosPage() {
     }
   }
 
-  async function avancarEstagio() {
+  async function concluirNoEstagioAtual() {
     if (!banhoAberto) return;
-    const proximo = NEXT_ESTAGIO[activeTab];
-    if (!proximo) return;
-    setAvancando(true);
+    setConcluindo(true);
     try {
       for (const traveId of travesSelecionadasMover) {
         const trave = travesPorBanho[banhoAberto.id]?.find((t) => t.traveId === traveId);
         if (!trave?.sessaoId) continue;
         await api.put(`/trave_sessao/${trave.sessaoId}/avancar-estagio`, {
-          proximoEstagio: proximo,
+          proximoEstagio: activeTab,
         });
       }
       fecharModalMover();
       await carregarTudo();
-    } catch (err) {
-      console.error('Erro ao avançar estágio:', err);
+    } catch {
       setAlertState({
         open: true,
-        title: 'Erro ao avançar estágio',
-        message: 'Não foi possível avançar as traves para o próximo estágio. Tente novamente.',
+        title: 'Erro ao concluir',
+        message: 'Não foi possível concluir o tratamento. Tente novamente.',
         type: 'error',
       });
     } finally {
-      setAvancando(false);
-    }
-  }
-
-  // ── Iniciar tratamento (aguardando → ativo no banho) ───────────────────────
-
-  async function iniciarAguardando() {
-    if (banhoIniciarId === null) return;
-    try {
-      for (const traveId of travesIniciarSelecionadas) {
-        const trave = travesAguardando.find((t) => t.traveId === traveId);
-        if (!trave) continue;
-        await api.post('/trave_sessao', {
-          processoId: trave.processoId,
-          traveIds: [traveId],
-          banhoId: banhoIniciarId,
-        });
-      }
-      setIsModalIniciarOpen(false);
-      setTravesIniciarSelecionadas([]);
-      setBanhoIniciarId(null);
-      await carregarTudo();
-    } catch (err) {
-      console.error('Erro ao iniciar tratamento:', err);
-      setAlertState({
-        open: true,
-        title: 'Erro ao iniciar tratamento',
-        message: 'Não foi possível iniciar o tratamento. Tente novamente.',
-        type: 'error',
-      });
+      setConcluindo(false);
     }
   }
 
@@ -484,8 +478,7 @@ export default function ProcessosPage() {
       });
       fecharModalAdicionar();
       await carregarTudo();
-    } catch (err) {
-      console.error('Erro ao adicionar trave:', err);
+    } catch {
       setAlertState({
         open: true,
         title: 'Erro ao adicionar trave',
@@ -501,8 +494,7 @@ export default function ProcessosPage() {
     try {
       await api.put(`/processo/finalizar/${processoId}`);
       await carregarTudo();
-    } catch (err) {
-      console.error('Erro ao finalizar processo:', err);
+    } catch {
       setAlertState({
         open: true,
         title: 'Erro ao finalizar',
@@ -512,18 +504,48 @@ export default function ProcessosPage() {
     }
   }
 
+  async function liberarTrave(processoId: number, traveId: number) {
+    try {
+      await api.put(`/processo/${processoId}/trave/${traveId}/liberar`);
+      await carregarTudo();
+    } catch {
+      setAlertState({
+        open: true,
+        title: 'Erro ao liberar',
+        message: 'Não foi possível liberar a trave. Tente novamente.',
+        type: 'error',
+      });
+    }
+  }
+
   // ── Derivados ──────────────────────────────────────────────────────────────
 
   const banhosFiltrados = banhos.filter((b) => b.areas.some((a) => a.nome === activeTab));
-  const proximoEstagio = banhoAberto ? NEXT_ESTAGIO[activeTab] : undefined;
 
-  const banhosDestinoMesmoEstagio = banhoAberto
-    ? banhos.filter((b) => b.areas.some((a) => a.nome === activeTab) && b.id !== banhoAberto.id)
+  const prevStage = PREV_ESTAGIO[activeTab];
+  const nextStage = NEXT_ESTAGIO[activeTab];
+
+  const banhosCompartilhadosPrev = prevStage
+    ? banhosFiltrados.filter((b) => b.areas.some((a) => a.nome === prevStage))
     : [];
 
-  const aguardandoNesteEstagio = travesAguardando.filter(
-    (t) => t.estagioAtual === activeTab
+  const banhosCompartilhadosNext = nextStage
+    ? banhosFiltrados.filter(
+        (b) =>
+          b.areas.some((a) => a.nome === nextStage) &&
+          !banhosCompartilhadosPrev.some((bp) => bp.id === b.id)
+      )
+    : [];
+
+  const banhosExclusivos = banhosFiltrados.filter(
+    (b) =>
+      !banhosCompartilhadosPrev.some((bp) => bp.id === b.id) &&
+      !banhosCompartilhadosNext.some((bn) => bn.id === b.id)
   );
+
+  const banhosDestinoMesmoEstagio = banhoAberto
+    ? banhosFiltrados.filter((b) => b.id !== banhoAberto.id)
+    : [];
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
@@ -532,18 +554,18 @@ export default function ProcessosPage() {
 
       {/* Stage Stepper */}
       <div className="bg-white border-b border-slate-200 px-6 py-5">
-        <div className="flex items-center gap-0">
+        <div className="flex items-center gap-1 w-full">
           {TABS.map((tab, idx) => (
             <Fragment key={tab}>
               <button
                 onClick={() => setActiveTab(tab)}
-                className={`flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold transition-all ${
+                className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-3 py-3 text-sm font-semibold transition-all ${
                   activeTab === tab
                     ? 'bg-cyan-600 text-white shadow-sm'
                     : 'bg-white text-slate-500 hover:bg-slate-50 hover:text-slate-700 border border-slate-200'
                 }`}
               >
-                <span className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${
+                <span className={`flex h-7 w-7 items-center justify-center rounded-full text-sm font-bold ${
                   activeTab === tab ? 'bg-white/20' : 'bg-slate-100 text-slate-400'
                 }`}>
                   {idx + 1}
@@ -573,74 +595,53 @@ export default function ProcessosPage() {
                 carregarTravesLivres();
                 setIsModalAdicionarOpen(true);
               }}
-              className="inline-flex items-center gap-2 rounded-lg bg-slate-100 px-5 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-200 transition-colors"
+              className="inline-flex items-center gap-2 rounded-xl bg-slate-100 px-6 py-3 text-base font-semibold text-slate-700 hover:bg-slate-200 transition-colors"
             >
               <span className="text-base leading-none">＋</span> Adicionar trave
             </button>
             <button
               onClick={openModalCriar}
-              className="inline-flex items-center gap-2 rounded-lg bg-cyan-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md hover:bg-cyan-700 transition-colors"
+              className="inline-flex items-center gap-2 rounded-xl bg-cyan-600 px-6 py-3 text-base font-semibold text-white shadow-md hover:bg-cyan-700 transition-colors"
             >
               <span className="text-base leading-none">＋</span> Novo processo
             </button>
           </div>
         )}
 
-        {activeTab === 'POS_TRATAMENTO' ? (
-          /* ── Conteúdo POS_TRATAMENTO ── */
-          processosPos.length === 0 ? (
-            <p className="text-sm text-slate-400 text-center mt-16">
-              Nenhum processo aguardando finalização.
-            </p>
-          ) : (
-            <div className="flex flex-col gap-4">
-              {processosPos.map((p) => (
-                <ProcessoPosCard key={p.processoId} processo={p} onFinalizar={finalizarProcesso} />
-              ))}
-            </div>
-          )
+        {/* ── Conteúdo (todos os tabs) ── */}
+        {banhosFiltrados.length === 0 && !(activeTab === 'POS_TRATAMENTO' && processosPos.length > 0) ? (
+          <p className="text-sm text-slate-400 text-center mt-16">
+            Nenhum banho cadastrado para este estágio.
+          </p>
         ) : (
-          /* ── Conteúdo PRE_TRATAMENTO / TRATAMENTO ── */
-          <>
-            {/* Faixa âmbar — traves aguardando neste estágio */}
-            {aguardandoNesteEstagio.length > 0 && (
-              <div className="mb-5 rounded-xl border border-l-4 border-l-amber-400 border-amber-200 bg-amber-50 px-5 py-5">
-                <p className="text-sm font-bold text-amber-700 mb-3">
-                  ⏳ Aguardando movimentação
-                </p>
-                <div className="flex flex-wrap gap-1.5 mb-3">
-                  {aguardandoNesteEstagio.map((t) => (
-                    <span
-                      key={t.traveId}
-                      className="rounded-md bg-white border border-amber-100 px-3 py-1.5 text-sm text-slate-600"
-                    >
-                      {t.traveNome}
-                      <span className="text-slate-400"> — OS {t.processoNumOS}</span>
-                    </span>
+          <div className="flex flex-col gap-8">
+
+            {/* Seção: compartilhado com estágio anterior (topo) */}
+            {banhosCompartilhadosPrev.length > 0 && (
+              <div>
+                <div className="flex items-center gap-3 mb-4">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                    ← {TAB_LABELS[prevStage!]}
+                  </span>
+                  <div className="flex-1 h-px bg-slate-200" />
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+                  {banhosCompartilhadosPrev.map((banho) => (
+                    <BanhoCard
+                      key={banho.id}
+                      banho={banho}
+                      traves={travesPorBanho[banho.id] ?? []}
+                      onClick={() => abrirModalBanho(banho)}
+                    />
                   ))}
                 </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setTravesIniciarSelecionadas([]);
-                    setBanhoIniciarId(null);
-                    setIsModalIniciarOpen(true);
-                  }}
-                  className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 transition-colors"
-                >
-                  Iniciar tratamento
-                </button>
               </div>
             )}
 
-            {/* Lista de banhos */}
-            {banhosFiltrados.length === 0 ? (
-              <p className="text-sm text-slate-400 text-center mt-16">
-                Nenhum banho cadastrado para este estágio.
-              </p>
-            ) : (
-              <div className="flex flex-col gap-4">
-                {banhosFiltrados.map((banho) => (
+            {/* Seção: exclusivos deste estágio (meio) */}
+            {banhosExclusivos.length > 0 && (
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+                {banhosExclusivos.map((banho) => (
                   <BanhoCard
                     key={banho.id}
                     banho={banho}
@@ -650,7 +651,48 @@ export default function ProcessosPage() {
                 ))}
               </div>
             )}
-          </>
+
+            {/* Seção: compartilhado com estágio seguinte (base) */}
+            {banhosCompartilhadosNext.length > 0 && (
+              <div>
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="flex-1 h-px bg-slate-200" />
+                  <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                    {TAB_LABELS[nextStage!]} →
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+                  {banhosCompartilhadosNext.map((banho) => (
+                    <BanhoCard
+                      key={banho.id}
+                      banho={banho}
+                      traves={travesPorBanho[banho.id] ?? []}
+                      onClick={() => abrirModalBanho(banho)}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Seção: processos prontos para finalizar (somente Pós-Tratamento) */}
+            {activeTab === 'POS_TRATAMENTO' && processosPos.length > 0 && (
+              <div>
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="flex-1 h-px bg-emerald-200" />
+                  <span className="text-xs font-semibold uppercase tracking-wider text-emerald-600">
+                    Prontos para finalizar
+                  </span>
+                  <div className="flex-1 h-px bg-emerald-200" />
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+                  {processosPos.map((p) => (
+                    <ProcessoPosCard key={p.processoId} processo={p} onFinalizar={finalizarProcesso} onLiberarTrave={liberarTrave} />
+                  ))}
+                </div>
+              </div>
+            )}
+
+          </div>
         )}
       </div>
 
@@ -665,14 +707,14 @@ export default function ProcessosPage() {
               <button
                 type="button"
                 onClick={cancelModalCriar}
-                className="px-4 py-2 text-xs sm:text-sm font-medium text-slate-600 rounded-lg hover:bg-slate-100 transition-colors"
+                className="px-5 py-3 text-sm font-semibold text-slate-600 rounded-lg hover:bg-slate-100 transition-colors"
               >
                 Cancelar
               </button>
               <button
                 type="button"
                 onClick={confirmarCriacao}
-                className="px-4 py-2 text-xs sm:text-sm font-medium text-white rounded-lg bg-cyan-600 hover:bg-cyan-700 shadow-sm transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                className="px-5 py-3 text-sm font-semibold text-white rounded-lg bg-cyan-600 hover:bg-cyan-700 shadow-sm transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                 disabled={!novoNumOS || travesSelecionadas.length === 0}
               >
                 Criar processo
@@ -699,12 +741,29 @@ export default function ProcessosPage() {
                 <label className="text-xs font-medium text-slate-700">
                   Traves disponiveis
                 </label>
-                <span className="text-[11px] text-slate-400">
-                  {travesLivres.length} traves livres
-                </span>
+                <div className="flex items-center gap-3">
+                  <span className="text-[11px] text-slate-400">
+                    {travesLivres.length} livres
+                  </span>
+                  {travesLivres.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setTravesSelecionadas(
+                          travesSelecionadas.length === travesLivres.length
+                            ? []
+                            : travesLivres.map((t) => t.idTrave)
+                        )
+                      }
+                      className="text-xs text-cyan-600 font-medium hover:underline"
+                    >
+                      {travesSelecionadas.length === travesLivres.length ? 'Desmarcar' : 'Todas'}
+                    </button>
+                  )}
+                </div>
               </div>
 
-              <div className="space-y-1.5 max-h-44 overflow-y-auto rounded-lg border border-slate-200 bg-slate-50/60 px-2 py-1.5">
+              <div className="space-y-1.5 max-h-56 md:max-h-72 overflow-y-auto rounded-lg border border-slate-200 bg-slate-50/60 px-2 py-1.5">
                 {travesLivres.length === 0 && (
                   <p className="text-xs text-slate-400 px-1 py-1.5">
                     Nenhuma trave disponivel no momento.
@@ -744,30 +803,31 @@ export default function ProcessosPage() {
           title={banhoAberto.nome}
           onClose={fecharModalMover}
           description="Selecione as traves a mover e o banho de destino."
+          wide
           footer={
             <>
               <button
                 type="button"
                 onClick={fecharModalMover}
-                className="px-4 py-2 text-xs sm:text-sm font-medium text-slate-600 rounded-lg hover:bg-slate-100 transition-colors"
+                className="px-5 py-3 text-sm font-semibold text-slate-600 rounded-lg hover:bg-slate-100 transition-colors"
               >
                 Cancelar
               </button>
-              {proximoEstagio && (
+              {activeTab === 'POS_TRATAMENTO' && (
                 <button
                   type="button"
-                  onClick={avancarEstagio}
-                  disabled={travesSelecionadasMover.length === 0 || avancando}
-                  className="px-4 py-2 text-xs sm:text-sm font-medium text-white rounded-lg bg-emerald-600 hover:bg-emerald-700 shadow-sm transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                  onClick={concluirNoEstagioAtual}
+                  disabled={travesSelecionadasMover.length === 0 || concluindo}
+                  className="px-5 py-3 text-sm font-semibold text-white rounded-lg bg-emerald-600 hover:bg-emerald-700 shadow-sm transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                 >
-                  {avancando ? 'Avançando…' : `${TAB_LABELS[proximoEstagio]} →`}
+                  {concluindo ? 'Concluindo…' : '✓ Concluir tratamento'}
                 </button>
               )}
               <button
                 type="button"
                 onClick={moverTraves}
                 disabled={travesSelecionadasMover.length === 0 || banhoDestinoId === null || movendo}
-                className="px-4 py-2 text-xs sm:text-sm font-medium text-white rounded-lg bg-cyan-600 hover:bg-cyan-700 shadow-sm transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                className="px-5 py-3 text-sm font-semibold text-white rounded-lg bg-cyan-600 hover:bg-cyan-700 shadow-sm transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 {movendo ? 'Movendo…' : 'Mover selecionadas →'}
               </button>
@@ -777,11 +837,30 @@ export default function ProcessosPage() {
           <div className="space-y-5">
             {/* Traves no banho */}
             <div>
-              <p className="text-xs font-medium text-slate-700 mb-2">Traves neste banho</p>
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-xs font-medium text-slate-700">Traves neste banho</p>
+                {(travesPorBanho[banhoAberto.id] ?? []).length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setTravesSelecionadasMover(
+                        travesSelecionadasMover.length === (travesPorBanho[banhoAberto.id] ?? []).length
+                          ? []
+                          : (travesPorBanho[banhoAberto.id] ?? []).map((t) => t.traveId)
+                      )
+                    }
+                    className="text-xs text-cyan-600 font-medium hover:underline"
+                  >
+                    {travesSelecionadasMover.length === (travesPorBanho[banhoAberto.id] ?? []).length
+                      ? 'Desmarcar todas'
+                      : 'Selecionar todas'}
+                  </button>
+                )}
+              </div>
               {(travesPorBanho[banhoAberto.id] ?? []).length === 0 ? (
                 <p className="text-xs text-slate-400">Nenhuma trave neste banho no momento.</p>
               ) : (
-                <div className="space-y-1.5 max-h-40 overflow-y-auto rounded-lg border border-slate-200 bg-slate-50/60 px-2 py-1.5">
+                <div className="space-y-1.5 max-h-56 md:max-h-72 overflow-y-auto rounded-lg border border-slate-200 bg-slate-50/60 px-2 py-1.5">
                   {(travesPorBanho[banhoAberto.id] ?? []).map((t) => (
                     <label
                       key={t.traveId}
@@ -821,7 +900,7 @@ export default function ProcessosPage() {
                       key={b.id}
                       type="button"
                       onClick={() => setBanhoDestinoId(b.id)}
-                      className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
+                      className={`rounded-lg border px-4 py-3 text-sm font-semibold min-h-[44px] transition-colors ${
                         banhoDestinoId === b.id
                           ? 'border-cyan-500 bg-cyan-50 text-cyan-700'
                           : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
@@ -837,97 +916,6 @@ export default function ProcessosPage() {
         </Modal>
       )}
 
-      {/* ── Modal Iniciar Tratamento ───────────────────────────────────────────── */}
-      {isModalIniciarOpen && (
-        <Modal
-          title="Iniciar tratamento"
-          onClose={() => {
-            setIsModalIniciarOpen(false);
-            setTravesIniciarSelecionadas([]);
-            setBanhoIniciarId(null);
-          }}
-          description="Selecione as traves e o banho para iniciar o tratamento."
-          footer={
-            <>
-              <button
-                type="button"
-                onClick={() => {
-                  setIsModalIniciarOpen(false);
-                  setTravesIniciarSelecionadas([]);
-                  setBanhoIniciarId(null);
-                }}
-                className="px-4 py-2 text-xs sm:text-sm font-medium text-slate-600 rounded-lg hover:bg-slate-100 transition-colors"
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                onClick={iniciarAguardando}
-                disabled={travesIniciarSelecionadas.length === 0 || banhoIniciarId === null}
-                className="px-4 py-2 text-xs sm:text-sm font-medium text-white rounded-lg bg-emerald-600 hover:bg-emerald-700 shadow-sm transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-              >
-                Confirmar
-              </button>
-            </>
-          }
-        >
-          <div className="space-y-4">
-            {/* Traves aguardando neste estágio */}
-            <div>
-              <p className="text-xs font-medium text-slate-700 mb-2">Traves aguardando</p>
-              <div className="space-y-1.5 max-h-40 overflow-y-auto rounded-lg border border-slate-200 bg-slate-50/60 px-2 py-1.5">
-                {aguardandoNesteEstagio.map((t) => (
-                  <label
-                    key={t.traveId}
-                    className="flex items-center gap-2 cursor-pointer rounded-md px-2 py-1.5 hover:bg-white hover:shadow-[0_0_0_1px_rgba(148,163,184,0.35)] transition-all"
-                  >
-                    <input
-                      type="checkbox"
-                      className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
-                      checked={travesIniciarSelecionadas.includes(t.traveId)}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          setTravesIniciarSelecionadas([...travesIniciarSelecionadas, t.traveId]);
-                        } else {
-                          setTravesIniciarSelecionadas(
-                            travesIniciarSelecionadas.filter((id) => id !== t.traveId)
-                          );
-                        }
-                      }}
-                    />
-                    <span className="text-xs sm:text-sm text-slate-700">
-                      {t.traveNome}
-                      <span className="text-slate-400"> — OS {t.processoNumOS}</span>
-                    </span>
-                  </label>
-                ))}
-              </div>
-            </div>
-
-            {/* Seletor de banho */}
-            <div>
-              <p className="text-xs font-medium text-slate-700 mb-2">Selecionar banho</p>
-              <div className="flex flex-wrap gap-2">
-                {banhosFiltrados.map((b) => (
-                  <button
-                    key={b.id}
-                    type="button"
-                    onClick={() => setBanhoIniciarId(b.id)}
-                    className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
-                      banhoIniciarId === b.id
-                        ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
-                        : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
-                    }`}
-                  >
-                    {b.nome}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        </Modal>
-      )}
-
       {/* ── Modal Adicionar Trave a Processo ─────────────────────────────────── */}
       {isModalAdicionarOpen && (
         <Modal
@@ -939,7 +927,7 @@ export default function ProcessosPage() {
               <button
                 type="button"
                 onClick={fecharModalAdicionar}
-                className="px-4 py-2 text-xs sm:text-sm font-medium text-slate-600 rounded-lg hover:bg-slate-100 transition-colors"
+                className="px-5 py-3 text-sm font-semibold text-slate-600 rounded-lg hover:bg-slate-100 transition-colors"
               >
                 Cancelar
               </button>
@@ -947,7 +935,7 @@ export default function ProcessosPage() {
                 type="button"
                 onClick={adicionarTraveAoProcesso}
                 disabled={adicionarProcessoId === null || adicionarTraveId === null || adicionarBanhoId === null}
-                className="px-4 py-2 text-xs sm:text-sm font-medium text-white rounded-lg bg-cyan-600 hover:bg-cyan-700 shadow-sm transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                className="px-5 py-3 text-sm font-semibold text-white rounded-lg bg-cyan-600 hover:bg-cyan-700 shadow-sm transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 Confirmar
               </button>
@@ -967,7 +955,7 @@ export default function ProcessosPage() {
                       key={p.id}
                       type="button"
                       onClick={() => setAdicionarProcessoId(p.id)}
-                      className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
+                      className={`rounded-lg border px-4 py-3 text-sm font-semibold min-h-[44px] transition-colors ${
                         adicionarProcessoId === p.id
                           ? 'border-cyan-500 bg-cyan-50 text-cyan-700'
                           : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
@@ -992,7 +980,7 @@ export default function ProcessosPage() {
                       key={t.idTrave}
                       type="button"
                       onClick={() => setAdicionarTraveId(t.idTrave)}
-                      className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
+                      className={`rounded-lg border px-4 py-3 text-sm font-semibold min-h-[44px] transition-colors ${
                         adicionarTraveId === t.idTrave
                           ? 'border-cyan-500 bg-cyan-50 text-cyan-700'
                           : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
@@ -1018,7 +1006,7 @@ export default function ProcessosPage() {
                       key={b.id}
                       type="button"
                       onClick={() => setAdicionarBanhoId(b.id)}
-                      className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
+                      className={`rounded-lg border px-4 py-3 text-sm font-semibold min-h-[44px] transition-colors ${
                         adicionarBanhoId === b.id
                           ? 'border-cyan-500 bg-cyan-50 text-cyan-700'
                           : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
@@ -1043,7 +1031,7 @@ export default function ProcessosPage() {
             <button
               type="button"
               onClick={() => setAlertState((prev) => ({ ...prev, open: false }))}
-              className="px-4 py-2 text-xs sm:text-sm font-medium text-white rounded-lg bg-cyan-600 hover:bg-cyan-700 transition-colors"
+              className="px-5 py-3 text-sm font-semibold text-white rounded-lg bg-cyan-600 hover:bg-cyan-700 transition-colors"
             >
               OK
             </button>

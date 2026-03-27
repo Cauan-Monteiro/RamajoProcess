@@ -178,6 +178,34 @@ public class ProcessoController {
     }
 
     @Transactional
+    @PutMapping("/{processoId}/trave/{traveId}/liberar")
+    public ResponseEntity<Void> liberarTrave(@PathVariable Long processoId,
+                                             @PathVariable Long traveId) {
+        Trave trave = traveRepo.findById(traveId)
+                .orElseThrow(() -> new RuntimeException("Trave não encontrada"));
+
+        if (trave.getProcessoAtual() == null || !trave.getProcessoAtual().getId().equals(processoId)) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        LocalDateTime agora = LocalDateTime.now();
+
+        // Fechar sessão aberta desta trave neste processo (se houver)
+        sessaoRepo.findByTrave_IdAndFinalizadoEmIsNull(traveId).ifPresent(sessao -> {
+            sessao.setFinalizadoEm(agora);
+            sessao.setDuracaoMinutos(ChronoUnit.MINUTES.between(sessao.getIniciadoEm(), agora));
+            sessaoRepo.save(sessao);
+        });
+
+        trave.setEmUso(false);
+        trave.setProcessoAtual(null);
+        trave.setEstagioAtual(null);
+        traveRepo.save(trave);
+
+        return ResponseEntity.ok().build();
+    }
+
+    @Transactional
     @PostMapping("/{id}/trave")
     public ResponseEntity<Void> adicionarTrave(@PathVariable Long id,
                                                @RequestBody AdicionarTraveRequestDTO dto) {

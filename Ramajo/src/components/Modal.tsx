@@ -55,10 +55,10 @@ const Modal: React.FC<ModalProps> = ({
   return (
     <div className="fixed inset-0 z-40 flex items-center justify-center px-4 py-6 bg-slate-900/40 backdrop-blur-sm">
       <div
-        className={`w-full ${wide ? 'max-w-2xl' : 'max-w-lg'} bg-white rounded-2xl shadow-xl border ${current.border} overflow-hidden`}
+        className={`w-full ${wide ? 'max-w-2xl' : 'max-w-xl'} bg-white rounded-2xl shadow-xl border ${current.border} overflow-hidden`}
       >
         <div
-          className={`flex items-start justify-between px-6 py-4 border-b ${current.headerBg} ${current.border}`}
+          className={`flex items-start justify-between px-6 py-5 border-b ${current.headerBg} ${current.border}`}
         >
           <div className="flex items-start gap-3">
             {iconSymbol && (
@@ -69,14 +69,14 @@ const Modal: React.FC<ModalProps> = ({
               </div>
             )}
             <div className="flex flex-col gap-0.5">
-              <h2 className={`text-base font-semibold ${current.titleColor}`}>{title}</h2>
-              {description && <p className="text-xs text-slate-500">{description}</p>}
+              <h2 className={`text-lg font-semibold ${current.titleColor}`}>{title}</h2>
+              {description && <p className="text-sm text-slate-500">{description}</p>}
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="ml-3 inline-flex items-center justify-center w-7 h-7 rounded-full border border-slate-200 text-slate-500 text-xs hover:bg-slate-100 transition-colors"
+            className="ml-3 inline-flex items-center justify-center w-11 h-11 rounded-full border border-slate-200 text-slate-500 text-sm hover:bg-slate-100 transition-colors"
           >
             ✕
           </button>
@@ -84,7 +84,7 @@ const Modal: React.FC<ModalProps> = ({
 
         <div className="px-6 py-5 bg-white">{children}</div>
 
-        <div className="px-6 py-3 border-t border-slate-100 bg-slate-50/80 flex items-center justify-end gap-2">
+        <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/80 flex items-center justify-end gap-3">
           {footer}
         </div>
       </div>

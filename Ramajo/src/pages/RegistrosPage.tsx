@@ -129,9 +129,12 @@ export default function RegistrosPage() {
   const [expandidos, setExpandidos] = useState<Set<number>>(new Set());
   const [historicos, setHistoricos] = useState<Record<number, SessaoHistorico[]>>({});
   const [carregando, setCarregando] = useState<Set<number>>(new Set());
+  const [erroCarga, setErroCarga] = useState(false);
 
   useEffect(() => {
-    api.get('/processo/inativo').then((res) => setProcessos(res.data)).catch(console.error);
+    api.get('/processo/inativo')
+      .then((res) => setProcessos(res.data))
+      .catch(() => setErroCarga(true));
   }, []);
 
   async function toggleExpandir(id: number) {
@@ -152,8 +155,7 @@ export default function RegistrosPage() {
     try {
       const res = await api.get(`/processo/${id}/historico`);
       setHistoricos((prev) => ({ ...prev, [id]: res.data }));
-    } catch (err) {
-      console.error('Erro ao carregar histórico:', err);
+    } catch {
       setHistoricos((prev) => ({ ...prev, [id]: [] }));
     } finally {
       setCarregando((prev) => {
@@ -168,7 +170,11 @@ export default function RegistrosPage() {
     <div>
       <h1 className="text-xl font-bold text-slate-800 mb-6">Registros</h1>
 
-      {processos.length === 0 ? (
+      {erroCarga ? (
+        <p className="text-sm text-red-500 text-center mt-16">
+          Erro ao carregar registros. Tente recarregar a página.
+        </p>
+      ) : processos.length === 0 ? (
         <p className="text-sm text-slate-400 text-center mt-16">
           Nenhum processo finalizado ainda.
         </p>

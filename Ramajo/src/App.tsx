@@ -23,12 +23,12 @@ export default function App() {
         </div>
 
         {/* Navigation links */}
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-2">
           <NavLink
             to="/"
             end
             className={({ isActive }) =>
-              `px-5 py-2.5 text-sm font-semibold rounded-lg transition-colors ${
+              `px-5 py-3 text-base font-semibold rounded-lg transition-colors ${
                 isActive
                   ? 'bg-cyan-600 text-white shadow-sm'
                   : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
@@ -40,7 +40,7 @@ export default function App() {
           <NavLink
             to="/cadastros"
             className={({ isActive }) =>
-              `px-5 py-2.5 text-sm font-semibold rounded-lg transition-colors ${
+              `px-5 py-3 text-base font-semibold rounded-lg transition-colors ${
                 isActive
                   ? 'bg-cyan-600 text-white shadow-sm'
                   : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
@@ -52,7 +52,7 @@ export default function App() {
           <NavLink
             to="/registros"
             className={({ isActive }) =>
-              `px-5 py-2.5 text-sm font-semibold rounded-lg transition-colors ${
+              `px-5 py-3 text-base font-semibold rounded-lg transition-colors ${
                 isActive
                   ? 'bg-cyan-600 text-white shadow-sm'
                   : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
