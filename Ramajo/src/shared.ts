@@ -80,7 +80,7 @@ export interface SessaoHistorico {
 
 export const api: AxiosInstance = axios.create({
   // baseURL: 'https://ramajoprocess-production.up.railway.app/api',
-  baseURL: 'http://localhost:8080/api',
+  baseURL: 'http://34.39.167.215:8080/api',
   headers: {
     'Content-Type': 'application/json',
   },
