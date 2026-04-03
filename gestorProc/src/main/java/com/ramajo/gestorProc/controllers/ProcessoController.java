@@ -13,6 +13,7 @@ import com.ramajo.gestorProc.repositories.TraveSessaoRepository;
 import com.ramajo.gestorProc.repositories.TraveRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -52,8 +53,13 @@ public class ProcessoController {
     }
 
     @GetMapping("/inativo")
-    public List<ProcessoResponseDTO> findInativos() {
-        return repo.findByFinishedAtIsNotNull().stream()
+    public List<ProcessoResponseDTO> findInativos(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime from,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime to) {
+        LocalDateTime fim = (to != null) ? to : LocalDateTime.now();
+        LocalDateTime inicio = (from != null) ? from : fim.minusDays(7);
+
+        return repo.findByFinishedAtBetween(inicio, fim).stream()
                 .map(processo -> {
                     List<String> nomes = sessaoRepo.findByProcesso_IdOrderByIniciadoEmAsc(processo.getId())
                             .stream().map(s -> s.getTrave().getNome()).distinct().toList();
