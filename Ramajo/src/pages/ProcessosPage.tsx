@@ -1,5 +1,6 @@
 import { Fragment, useEffect, useState } from 'react';
 import Modal from '../components/Modal';
+import { useBarcodeScanner } from '../hooks/useBarcodeScanner';
 import {
   api,
   calcularProgressoBanho,
@@ -230,6 +231,7 @@ export default function ProcessosPage() {
   // ── Modal criar processo ───────────────────────────────────────────────────
   const [isModalCriarOpen, setIsModalCriarOpen] = useState(false);
   const [novoNumOS, setNovoNumOS] = useState('');
+  const { openScanner, scannerModal } = useBarcodeScanner();
   const [travesSelecionadas, setTravesSelecionadas] = useState<number[]>([]);
   const [travesLivres, setTravesLivres] = useState<Trave[]>([]);
 
@@ -696,6 +698,8 @@ export default function ProcessosPage() {
         )}
       </div>
 
+      {scannerModal}
+
       {/* ── Modal Criar Processo ──────────────────────────────────────────────── */}
       {isModalCriarOpen && (
         <Modal
@@ -727,13 +731,27 @@ export default function ProcessosPage() {
               <label className="text-xs font-medium text-slate-700">
                 Numero da OS
               </label>
-              <input
-                type="text"
-                placeholder="Ex.: 123456"
-                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-cyan-500/70 focus:border-cyan-500 transition-shadow"
-                value={novoNumOS}
-                onChange={(e) => setNovoNumOS(e.target.value)}
-              />
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="Ex.: 123456"
+                  className="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-cyan-500/70 focus:border-cyan-500 transition-shadow"
+                  value={novoNumOS}
+                  onChange={(e) => setNovoNumOS(e.target.value)}
+                />
+                <button
+                  type="button"
+                  onClick={() => openScanner((code) => setNovoNumOS(code))}
+                  className="shrink-0 flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 transition-colors"
+                  title="Escanear código de barras"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/>
+                    <line x1="7" y1="8" x2="7" y2="16"/><line x1="10" y1="8" x2="10" y2="16"/><line x1="13" y1="8" x2="13" y2="11"/><line x1="16" y1="8" x2="16" y2="16"/><line x1="13" y1="14" x2="13" y2="16"/>
+                  </svg>
+                  Escanear
+                </button>
+              </div>
             </div>
 
             <div className="flex flex-col gap-2">

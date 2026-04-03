@@ -122,6 +122,25 @@ function ProcessoRegistroCard({
   );
 }
 
+// ─── Helpers de data ──────────────────────────────────────────────────────────
+
+function toInputDate(d: Date): string {
+  return d.toISOString().slice(0, 10);
+}
+
+function inicioUltimos7Dias(): Date {
+  const d = new Date();
+  d.setDate(d.getDate() - 7);
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+function fimHoje(): Date {
+  const d = new Date();
+  d.setHours(23, 59, 59, 999);
+  return d;
+}
+
 // ─── RegistrosPage ────────────────────────────────────────────────────────────
 
 export default function RegistrosPage() {
@@ -130,12 +149,27 @@ export default function RegistrosPage() {
   const [historicos, setHistoricos] = useState<Record<number, SessaoHistorico[]>>({});
   const [carregando, setCarregando] = useState<Set<number>>(new Set());
   const [erroCarga, setErroCarga] = useState(false);
+  const [dataInicio, setDataInicio] = useState<Date>(inicioUltimos7Dias);
+  const [dataFim, setDataFim] = useState<Date>(fimHoje);
 
   useEffect(() => {
-    api.get('/processo/inativo')
+    setErroCarga(false);
+    setExpandidos(new Set());
+    setHistoricos({});
+    api.get('/processo/inativo', {
+      params: {
+        from: dataInicio.toISOString(),
+        to: dataFim.toISOString(),
+      },
+    })
       .then((res) => setProcessos(res.data))
       .catch(() => setErroCarga(true));
-  }, []);
+  }, [dataInicio, dataFim]);
+
+  function resetarUltimos7Dias() {
+    setDataInicio(inicioUltimos7Dias());
+    setDataFim(fimHoje());
+  }
 
   async function toggleExpandir(id: number) {
     if (expandidos.has(id)) {
@@ -168,7 +202,44 @@ export default function RegistrosPage() {
 
   return (
     <div>
-      <h1 className="text-xl font-bold text-slate-800 mb-6">Registros</h1>
+      <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+        <h1 className="text-xl font-bold text-slate-800">Registros</h1>
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            onClick={resetarUltimos7Dias}
+            className="text-xs font-medium px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 transition-colors"
+          >
+            Últimos 7 dias
+          </button>
+          <div className="flex items-center gap-2 text-xs text-slate-500">
+            <span>De</span>
+            <input
+              type="date"
+              value={toInputDate(dataInicio)}
+              max={toInputDate(dataFim)}
+              onChange={(e) => {
+                if (!e.target.value) return;
+                const d = new Date(e.target.value + 'T00:00:00');
+                setDataInicio(d);
+              }}
+              className="text-xs border border-slate-200 rounded-lg px-2 py-1.5 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-cyan-400"
+            />
+            <span>até</span>
+            <input
+              type="date"
+              value={toInputDate(dataFim)}
+              min={toInputDate(dataInicio)}
+              onChange={(e) => {
+                if (!e.target.value) return;
+                const d = new Date(e.target.value + 'T23:59:59');
+                setDataFim(d);
+              }}
+              className="text-xs border border-slate-200 rounded-lg px-2 py-1.5 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-cyan-400"
+            />
+          </div>
+        </div>
+      </div>
 
       {erroCarga ? (
         <p className="text-sm text-red-500 text-center mt-16">
@@ -176,7 +247,7 @@ export default function RegistrosPage() {
         </p>
       ) : processos.length === 0 ? (
         <p className="text-sm text-slate-400 text-center mt-16">
-          Nenhum processo finalizado ainda.
+          Nenhum processo finalizado no período selecionado.
         </p>
       ) : (
         <div className="flex flex-col gap-4">
