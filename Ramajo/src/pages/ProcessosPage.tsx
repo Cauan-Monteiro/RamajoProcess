@@ -231,6 +231,7 @@ export default function ProcessosPage() {
   // ── Modal criar processo ───────────────────────────────────────────────────
   const [isModalCriarOpen, setIsModalCriarOpen] = useState(false);
   const [novoNumOS, setNovoNumOS] = useState('');
+  const [scanSuccess, setScanSuccess] = useState<string | null>(null);
   const { openScanner, scannerModal } = useBarcodeScanner();
   const [travesSelecionadas, setTravesSelecionadas] = useState<number[]>([]);
   const [travesLivres, setTravesLivres] = useState<Trave[]>([]);
@@ -341,6 +342,7 @@ export default function ProcessosPage() {
   function cancelModalCriar() {
     setNovoNumOS('');
     setTravesSelecionadas([]);
+    setScanSuccess(null);
     setIsModalCriarOpen(false);
   }
 
@@ -371,6 +373,7 @@ export default function ProcessosPage() {
       setIsModalCriarOpen(false);
       setNovoNumOS('');
       setTravesSelecionadas([]);
+      setScanSuccess(null);
       await carregarTudo();
       setAlertState({
         open: true,
@@ -741,7 +744,14 @@ export default function ProcessosPage() {
                 />
                 <button
                   type="button"
-                  onClick={() => openScanner((code) => setNovoNumOS(code))}
+                  onClick={() => {
+                    setIsModalCriarOpen(false);
+                    openScanner((code) => {
+                      setNovoNumOS(code);
+                      setScanSuccess(code);
+                      setIsModalCriarOpen(true);
+                    });
+                  }}
                   className="shrink-0 flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 transition-colors"
                   title="Escanear código de barras"
                 >
@@ -752,6 +762,11 @@ export default function ProcessosPage() {
                   Escanear
                 </button>
               </div>
+              {scanSuccess && (
+                <p className="text-xs text-emerald-600 font-medium">
+                  Código lido: {scanSuccess}
+                </p>
+              )}
             </div>
 
             <div className="flex flex-col gap-2">
