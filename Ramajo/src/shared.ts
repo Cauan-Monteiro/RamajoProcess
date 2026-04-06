@@ -57,6 +57,15 @@ export interface TraveEmBanho extends TraveEstado {
 }
 
 export interface Banho {
+
+
+
+
+
+
+
+
+
   id: number;
   nome: string;
   descricao: string;
@@ -79,8 +88,8 @@ export interface SessaoHistorico {
 // ─── Axios instance ───────────────────────────────────────────────────────────
 
 export const api: AxiosInstance = axios.create({
-  // baseURL: 'https://ramajoprocess-production.up.railway.app/api',
-  baseURL: 'http://34.39.167.215:8080/api',
+  baseURL: 'https://ramajo.moteirodev.shop/api',
+  //baseURL: 'http://localhost:8080/api',
   headers: {
     'Content-Type': 'application/json',
   },
