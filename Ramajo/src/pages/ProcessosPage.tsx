@@ -133,7 +133,7 @@ function ProcessoPosCard({
     <div className={`bg-white rounded-xl border shadow-md px-5 py-5 border-l-4 ${
       processo.prontoParaFinalizar ? 'border-l-emerald-400' : 'border-l-amber-400'
     } border-slate-100`}>
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
         <div>
           <span className="text-base font-bold text-slate-800">OS {processo.processoNumOS}</span>
           <span className="ml-2 text-sm text-slate-400">
@@ -144,7 +144,7 @@ function ProcessoPosCard({
           type="button"
           disabled={!processo.prontoParaFinalizar}
           onClick={() => onFinalizar(processo.processoId)}
-          className="rounded-lg bg-emerald-600 px-5 py-3 text-base font-semibold text-white hover:bg-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full sm:w-auto rounded-lg bg-emerald-600 px-5 py-3 text-base font-semibold text-white hover:bg-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           Finalizar processo
         </button>
@@ -156,7 +156,7 @@ function ProcessoPosCard({
           return (
             <li
               key={t.traveId}
-              className={`flex items-center justify-between rounded-lg border px-3 py-2 text-sm ${
+              className={`flex flex-wrap items-center justify-between rounded-lg border px-3 py-2 text-sm ${
                 pronta
                   ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
                   : 'bg-amber-50 border-amber-200 text-amber-800'
@@ -198,6 +198,12 @@ const TAB_LABELS: Record<Estagio, string> = {
   PRE_TRATAMENTO: 'Pré-Tratamento',
   TRATAMENTO: 'Tratamento',
   POS_TRATAMENTO: 'Pós-Tratamento',
+};
+
+const TAB_LABELS_SHORT: Record<Estagio, string> = {
+  PRE_TRATAMENTO: 'Pré',
+  TRATAMENTO: 'Trat.',
+  POS_TRATAMENTO: 'Pós',
 };
 
 const TABS: Estagio[] = ['PRE_TRATAMENTO', 'TRATAMENTO', 'POS_TRATAMENTO'];
@@ -558,24 +564,25 @@ export default function ProcessosPage() {
     <div className="min-h-screen bg-slate-50">
 
       {/* Stage Stepper */}
-      <div className="bg-white border-b border-slate-200 px-6 py-5">
+      <div className="bg-white border-b border-slate-200 px-4 py-4 sm:px-6 sm:py-5">
         <div className="flex items-center gap-1 w-full">
           {TABS.map((tab, idx) => (
             <Fragment key={tab}>
               <button
                 onClick={() => setActiveTab(tab)}
-                className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-3 py-3 text-sm font-semibold transition-all ${
+                className={`flex flex-1 items-center justify-center gap-1 sm:gap-2 rounded-lg px-2 sm:px-3 py-3 text-xs sm:text-sm font-semibold transition-all ${
                   activeTab === tab
                     ? 'bg-cyan-600 text-white shadow-sm'
                     : 'bg-white text-slate-500 hover:bg-slate-50 hover:text-slate-700 border border-slate-200'
                 }`}
               >
-                <span className={`flex h-7 w-7 items-center justify-center rounded-full text-sm font-bold ${
+                <span className={`hidden sm:flex h-7 w-7 items-center justify-center rounded-full text-sm font-bold ${
                   activeTab === tab ? 'bg-white/20' : 'bg-slate-100 text-slate-400'
                 }`}>
                   {idx + 1}
                 </span>
-                {TAB_LABELS[tab]}
+                <span className="hidden sm:inline">{TAB_LABELS[tab]}</span>
+                <span className="sm:hidden">{TAB_LABELS_SHORT[tab]}</span>
               </button>
               {idx < TABS.length - 1 && (
                 <div className="flex items-center px-2 text-slate-300">
@@ -590,25 +597,25 @@ export default function ProcessosPage() {
       </div>
 
       {/* Content */}
-      <div className="px-6 py-8 lg:px-10">
+      <div className="px-4 py-6 sm:px-6 sm:py-8 lg:px-10">
 
         {/* Botões — somente na aba PRÉ-TRATAMENTO */}
         {activeTab === 'PRE_TRATAMENTO' && (
-          <div className="flex justify-end gap-2 mb-6">
+          <div className="flex flex-col sm:flex-row sm:justify-end gap-2 mb-6">
             <button
               onClick={() => {
                 carregarTravesLivres();
                 setIsModalAdicionarOpen(true);
               }}
-              className="inline-flex items-center gap-2 rounded-xl bg-slate-100 px-6 py-3 text-base font-semibold text-slate-700 hover:bg-slate-200 transition-colors"
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-100 px-4 py-2.5 sm:px-6 sm:py-3 text-sm sm:text-base font-semibold text-slate-700 hover:bg-slate-200 transition-colors"
             >
-              <span className="text-base leading-none">＋</span> Adicionar trave
+              <span className="leading-none">＋</span> Adicionar trave
             </button>
             <button
               onClick={openModalCriar}
-              className="inline-flex items-center gap-2 rounded-xl bg-cyan-600 px-6 py-3 text-base font-semibold text-white shadow-md hover:bg-cyan-700 transition-colors"
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-cyan-600 px-4 py-2.5 sm:px-6 sm:py-3 text-sm sm:text-base font-semibold text-white shadow-md hover:bg-cyan-700 transition-colors"
             >
-              <span className="text-base leading-none">＋</span> Novo processo
+              <span className="leading-none">＋</span> Novo processo
             </button>
           </div>
         )}

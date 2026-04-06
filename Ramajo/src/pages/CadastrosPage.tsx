@@ -299,7 +299,7 @@ export default function CadastrosPage() {
   return (
     <>
       <div className="mb-6">
-        <h1 className="text-2xl font-semibold tracking-tight text-slate-900">
+        <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-slate-900">
           Cadastros
         </h1>
         <p className="text-sm text-slate-500 mt-1">
@@ -359,8 +359,8 @@ export default function CadastrosPage() {
                 key={trave.idTrave}
                 className="flex items-center justify-between bg-white rounded-xl border border-slate-100 shadow-sm px-5 py-4 hover:border-slate-200 hover:shadow-md transition-all"
               >
-                <div className="flex flex-col gap-1.5">
-                  <span className="text-sm font-semibold text-slate-800">{trave.nome}</span>
+                <div className="flex flex-col gap-1.5 min-w-0">
+                  <span className="text-sm font-semibold text-slate-800 truncate">{trave.nome}</span>
                   <span
                     className={`inline-flex w-fit items-center px-2 py-0.5 rounded-full text-[11px] font-semibold border ${
                       trave.emUso
