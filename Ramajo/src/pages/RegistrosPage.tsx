@@ -125,7 +125,13 @@ function ProcessoRegistroCard({
 // ─── Helpers de data ──────────────────────────────────────────────────────────
 
 function toInputDate(d: Date): string {
-  return d.toISOString().slice(0, 10);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+function toLocalISOString(d: Date): string {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 }
 
 function inicioUltimos7Dias(): Date {
@@ -158,8 +164,8 @@ export default function RegistrosPage() {
     setHistoricos({});
     api.get('/processo/inativo', {
       params: {
-        from: dataInicio.toISOString(),
-        to: dataFim.toISOString(),
+        from: toLocalISOString(dataInicio),
+        to: toLocalISOString(dataFim),
       },
     })
       .then((res) => setProcessos(res.data))
